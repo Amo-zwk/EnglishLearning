@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 from typing import Any, Callable
+from urllib.error import URLError
 from urllib import request
 
 
@@ -20,6 +21,7 @@ MODEL_ENV = "COPY_FORMAT_GEMINI_MODEL"
 PROMPT_FILE_ENV = "COPY_FORMAT_PROMPT_FILE"
 
 API_KEY_PATTERN = re.compile(r"AIza[0-9A-Za-z_-]{20,}")
+DEFAULT_GEMINI_TIMEOUT_SECONDS = 30.0
 
 
 class MissingGeminiConfigurationError(RuntimeError):
@@ -95,17 +97,24 @@ class GeminiGenerationAdapter:
     def __init__(
         self,
         config: GeminiAdapterConfig,
-        post_json: Callable[[str, dict[str, Any], dict[str, str]], dict[str, Any]]
+        timeout_seconds: float = DEFAULT_GEMINI_TIMEOUT_SECONDS,
+        post_json: Callable[
+            [str, dict[str, Any], dict[str, str], float], dict[str, Any]
+        ]
         | None = None,
     ) -> None:
         self._config = config
+        self._timeout_seconds = timeout_seconds
         self._post_json = post_json or self._default_post_json
 
     @classmethod
     def from_local_files(
         cls,
         environ: dict[str, str] | None = None,
-        post_json: Callable[[str, dict[str, Any], dict[str, str]], dict[str, Any]]
+        timeout_seconds: float = DEFAULT_GEMINI_TIMEOUT_SECONDS,
+        post_json: Callable[
+            [str, dict[str, Any], dict[str, str], float], dict[str, Any]
+        ]
         | None = None,
     ) -> "GeminiGenerationAdapter":
         environment = environ or dict(__import__("os").environ)
@@ -115,7 +124,11 @@ class GeminiGenerationAdapter:
             model_name=environment.get(MODEL_ENV, DEFAULT_MODEL).strip()
             or DEFAULT_MODEL,
         )
-        return cls(config=config, post_json=post_json)
+        return cls(
+            config=config,
+            timeout_seconds=timeout_seconds,
+            post_json=post_json,
+        )
 
     def generate_word(self, input_word: str) -> dict[str, str]:
         prompt = build_generation_prompt(self._config.prompt_text, input_word)
@@ -132,7 +145,21 @@ class GeminiGenerationAdapter:
             "Content-Type": "application/json",
             "x-goog-api-key": self._config.api_key,
         }
-        response = self._post_json(url, payload, headers)
+        try:
+            response = self._post_json(url, payload, headers, self._timeout_seconds)
+        except TimeoutError as error:
+            raise RuntimeError(
+                "Gemini request timed out. Please retry this word later."
+            ) from error
+        except URLError as error:
+            reason = getattr(error, "reason", None)
+            if isinstance(reason, TimeoutError):
+                raise RuntimeError(
+                    "Gemini request timed out. Please retry this word later."
+                ) from error
+            raise RuntimeError(
+                "Gemini request failed. Please check your network connection and retry."
+            ) from error
         return {"content": extract_response_text(response)}
 
     @staticmethod
@@ -140,6 +167,7 @@ class GeminiGenerationAdapter:
         url: str,
         payload: dict[str, Any],
         headers: dict[str, str],
+        timeout_seconds: float,
     ) -> dict[str, Any]:
         request_body = json.dumps(payload).encode("utf-8")
         http_request = request.Request(
@@ -148,7 +176,7 @@ class GeminiGenerationAdapter:
             headers=headers,
             method="POST",
         )
-        with request.urlopen(http_request) as http_response:
+        with request.urlopen(http_request, timeout=timeout_seconds) as http_response:
             response_body = http_response.read().decode("utf-8")
         return json.loads(response_body)
 

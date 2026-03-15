@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Callable, Protocol
+from urllib.error import URLError
 from urllib import request
 
 from src.copy_format_contract import ExtractedPhrasePair
@@ -15,6 +16,7 @@ ANKI_CONNECT_VERSION = 6
 ANKI_CONNECT_URL_ENV = "COPY_FORMAT_ANKI_CONNECT_URL"
 ANKI_CONNECT_CONFIG_ENV = "COPY_FORMAT_ANKI_CONNECT_CONFIG_FILE"
 DEFAULT_ANKI_CONNECT_CONFIG_FILE = "AnkiConnect"
+DEFAULT_ANKI_CONNECT_TIMEOUT_SECONDS = 15.0
 
 
 class MissingDeckSelectionError(ValueError):
@@ -98,10 +100,12 @@ class AnkiConnectHttpClient:
         self,
         base_url: str | None = None,
         version: int = ANKI_CONNECT_VERSION,
-        post_json: Callable[[str, dict[str, Any]], dict[str, Any]] | None = None,
+        timeout_seconds: float = DEFAULT_ANKI_CONNECT_TIMEOUT_SECONDS,
+        post_json: Callable[[str, dict[str, Any], float], dict[str, Any]] | None = None,
     ) -> None:
         self._base_url = base_url or resolve_anki_connect_url()
         self._version = version
+        self._timeout_seconds = timeout_seconds
         self._post_json = post_json or self._default_post_json
 
     def invoke(self, action: str, params: dict[str, Any] | None = None) -> Any:
@@ -110,7 +114,25 @@ class AnkiConnectHttpClient:
             "version": self._version,
             "params": params or {},
         }
-        response = self._post_json(self._base_url, payload)
+        try:
+            response = self._post_json(
+                self._base_url,
+                payload,
+                self._timeout_seconds,
+            )
+        except TimeoutError as error:
+            raise RuntimeError(
+                "AnkiConnect request timed out. Please confirm Anki and AnkiConnect are running, then retry."
+            ) from error
+        except URLError as error:
+            reason = getattr(error, "reason", None)
+            if isinstance(reason, TimeoutError):
+                raise RuntimeError(
+                    "AnkiConnect request timed out. Please confirm Anki and AnkiConnect are running, then retry."
+                ) from error
+            raise RuntimeError(
+                f"Could not reach AnkiConnect at {self._base_url}. Please confirm Anki and AnkiConnect are running."
+            ) from error
 
         if response.get("error") is not None:
             raise RuntimeError(f"AnkiConnect error for {action}: {response['error']}")
@@ -118,7 +140,11 @@ class AnkiConnectHttpClient:
         return response.get("result")
 
     @staticmethod
-    def _default_post_json(url: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _default_post_json(
+        url: str,
+        payload: dict[str, Any],
+        timeout_seconds: float,
+    ) -> dict[str, Any]:
         request_body = json.dumps(payload).encode("utf-8")
         http_request = request.Request(
             url,
@@ -126,7 +152,10 @@ class AnkiConnectHttpClient:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with request.urlopen(http_request) as http_response:
+        with request.urlopen(
+            http_request,
+            timeout=timeout_seconds,
+        ) as http_response:
             response_body = http_response.read().decode("utf-8")
         return json.loads(response_body)
 

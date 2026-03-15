@@ -1,4 +1,5 @@
 import unittest
+from urllib.error import URLError
 
 from src.gemini_generation_adapter import (
     GeminiGenerationAdapter,
@@ -59,10 +60,11 @@ class GeminiGenerationAdapterTests(unittest.TestCase):
     def test_returns_content_dictionary_from_generate_word(self) -> None:
         recorded_request = {}
 
-        def fake_post(url, payload, headers):
+        def fake_post(url, payload, headers, timeout_seconds):
             recorded_request["url"] = url
             recorded_request["payload"] = payload
             recorded_request["headers"] = headers
+            recorded_request["timeout_seconds"] = timeout_seconds
             return {
                 "candidates": [
                     {
@@ -93,7 +95,36 @@ class GeminiGenerationAdapterTests(unittest.TestCase):
             "待解析单词：abandon",
             recorded_request["payload"]["contents"][0]["parts"][0]["text"],
         )
+        self.assertEqual(recorded_request["timeout_seconds"], 30.0)
         self.assertEqual(result["content"], "(复制专用: $abandon hope$ $放弃希望$)")
+
+    def test_wraps_timeout_error_with_retry_message(self) -> None:
+        adapter = GeminiGenerationAdapter.from_local_files(
+            environ={
+                "GEMINI_API_KEY": "AIzaSyEnvKey1234567890abcd",
+                "COPY_FORMAT_PROMPT_FILE": "/home/usercoder/project1/英语二的备考prompt.txt",
+            },
+            post_json=lambda url, payload, headers, timeout_seconds: (
+                _ for _ in ()
+            ).throw(TimeoutError("timed out")),
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "Gemini request timed out"):
+            adapter.generate_word("abandon")
+
+    def test_wraps_network_error_with_retry_message(self) -> None:
+        adapter = GeminiGenerationAdapter.from_local_files(
+            environ={
+                "GEMINI_API_KEY": "AIzaSyEnvKey1234567890abcd",
+                "COPY_FORMAT_PROMPT_FILE": "/home/usercoder/project1/英语二的备考prompt.txt",
+            },
+            post_json=lambda url, payload, headers, timeout_seconds: (
+                _ for _ in ()
+            ).throw(URLError("network down")),
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "Gemini request failed"):
+            adapter.generate_word("abandon")
 
 
 if __name__ == "__main__":

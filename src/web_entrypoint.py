@@ -928,9 +928,12 @@ def render_page(workspace_html: str) -> str:
 
 def run_local_server(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> None:
     app = create_web_app()
-    with make_server(host, port, app) as httpd:
-        print(f"Serving review workspace on http://{host}:{port}")
-        httpd.serve_forever()
+    try:
+        with make_server(host, port, app) as httpd:
+            print(f"Serving review workspace on http://{host}:{port}")
+            httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping review workspace server.")
 
 
 def main() -> None:

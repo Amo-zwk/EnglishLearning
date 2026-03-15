@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+from urllib.error import URLError
 
 from src.copy_format_contract import ExtractedPhrasePair
 from src.anki_submission_gateway import (
@@ -192,8 +193,8 @@ class AnkiConnectHttpClientTests(unittest.TestCase):
     def test_builds_ankiconnect_request_envelope_for_deck_names(self) -> None:
         recorded_requests = []
 
-        def fake_post(url: str, payload: dict):
-            recorded_requests.append((url, payload))
+        def fake_post(url: str, payload: dict, timeout_seconds: float):
+            recorded_requests.append((url, payload, timeout_seconds))
             return {"result": ["Default"], "error": None}
 
         client = AnkiConnectHttpClient(post_json=fake_post)
@@ -207,9 +208,28 @@ class AnkiConnectHttpClientTests(unittest.TestCase):
                 (
                     "http://127.0.0.1:8765",
                     {"action": "deckNames", "version": 6, "params": {}},
+                    15.0,
                 )
             ],
         )
+
+    def test_wraps_timeout_error_with_actionable_message(self) -> None:
+        def fake_post(url: str, payload: dict, timeout_seconds: float):
+            raise TimeoutError("timed out")
+
+        client = AnkiConnectHttpClient(post_json=fake_post)
+
+        with self.assertRaisesRegex(RuntimeError, "AnkiConnect request timed out"):
+            client.invoke("deckNames", {})
+
+    def test_wraps_connection_error_with_actionable_message(self) -> None:
+        def fake_post(url: str, payload: dict, timeout_seconds: float):
+            raise URLError("connection refused")
+
+        client = AnkiConnectHttpClient(post_json=fake_post)
+
+        with self.assertRaisesRegex(RuntimeError, "Could not reach AnkiConnect"):
+            client.invoke("deckNames", {})
 
     def test_resolves_anki_connect_url_from_project_config_file(self) -> None:
         with TemporaryDirectory() as temp_dir:
