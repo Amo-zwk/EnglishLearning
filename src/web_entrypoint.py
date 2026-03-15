@@ -358,7 +358,16 @@ def render_page(workspace_html: str) -> str:
         .submission-global-banner-partial, .submission-global-banner-failed {{ background: linear-gradient(135deg, rgba(252, 229, 222, 0.98) 0%, rgba(255, 242, 238, 0.96) 100%); color: #702f1f; }}
         .submission-global-banner-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.82; }}
         .submission-global-banner-title {{ margin: 0; font-size: clamp(24px, 4vw, 32px); }}
-        .submission-global-banner-metrics, .submission-global-banner-text {{ margin: 0; line-height: 1.6; font-weight: 700; }}
+        .submission-global-banner-metrics {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0; }}
+        .submission-global-banner-metrics span {{ display: grid; gap: 4px; padding: 10px 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.42); border: 1px solid rgba(145, 112, 76, 0.12); font-weight: 700; line-height: 1.5; }}
+        .submission-global-banner-text {{ margin: 0; line-height: 1.6; font-weight: 700; }}
+        .submission-global-detail {{ display: grid; gap: 10px; padding: 14px 16px; border-radius: var(--radius-lg); background: rgba(255, 255, 255, 0.46); border: 1px solid rgba(145, 112, 76, 0.12); }}
+        .submission-global-detail-title {{ margin: 0; font-size: 18px; }}
+        .submission-global-detail-list {{ display: grid; gap: 10px; padding-left: 20px; margin: 0; }}
+        .submission-global-item {{ display: grid; gap: 4px; }}
+        .submission-global-item-front {{ font-weight: 700; color: #2f2d2b; }}
+        .submission-global-item-back {{ color: #62584d; }}
+        .submission-global-item-reason {{ color: #6b6f76; font-size: 14px; line-height: 1.6; }}
         button {{
             border: 0;
             border-radius: 999px;
@@ -466,6 +475,7 @@ def render_page(workspace_html: str) -> str:
         .submission-outcome-item {{ display: grid; gap: 2px; }}
         .submission-outcome-front {{ font-weight: 700; color: #2f2d2b; }}
         .submission-outcome-back {{ color: #6b6f76; }}
+        .submission-outcome-reason {{ color: #6b6f76; font-size: 14px; line-height: 1.6; }}
         .submission-error-message {{ margin: 0; padding: 12px 14px; border-radius: 14px; background: rgba(255, 240, 235, 0.92); border: 1px solid rgba(181, 83, 52, 0.16); color: #7f321c; }}
         @media (max-width: 720px) {{
             main {{ padding: 20px 14px 40px; }}

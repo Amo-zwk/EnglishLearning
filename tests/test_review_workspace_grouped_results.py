@@ -363,12 +363,17 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
         html = workspace.render_html()
 
         self.assertIn("data-submission-feedback-banner", html)
+        self.assertIn("已完成提交", html)
+        self.assertIn("目标 Deck: Default", html)
         self.assertIn("本次处理 1 条", html)
         self.assertIn("已加入 1 条", html)
+        self.assertIn("本次已加入", html)
+        self.assertIn("原因: Written to the selected deck successfully.", html)
         self.assertIn("已自动清空本轮输入和提取结果，可以直接开始下一批。", html)
         self.assertNotIn("提取结果汇总", html)
         self.assertNotIn("最终提交预览", html)
-        self.assertNotIn("deliver a speech", html)
+        self.assertIn("deliver a speech", html)
+        self.assertIn('<section class="grouped-results"></section>', html)
 
     def test_failed_submit_keeps_current_results_for_follow_up(self) -> None:
         workspace = ReviewWorkspaceController(
@@ -395,8 +400,14 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
         html = workspace.render_html()
 
         self.assertIn("data-submission-feedback-banner", html)
+        self.assertIn("提交未完成", html)
         self.assertIn("提交失败 1 条", html)
         self.assertIn("当前内容已保留", html)
+        self.assertIn("提交失败", html)
+        self.assertIn(
+            "原因: This item was not written successfully during submission.", html
+        )
+        self.assertIn("AnkiConnect offline", html)
         self.assertIn("提取结果汇总", html)
         self.assertIn("claim damages", html)
 

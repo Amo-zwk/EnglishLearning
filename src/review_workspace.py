@@ -7,7 +7,7 @@ import math
 from typing import Callable
 
 from src.ai_generation_orchestrator import OrchestratedResultGroup
-from src.anki_submission_gateway import SubmissionResult
+from src.anki_submission_gateway import SubmissionOutcomeItem, SubmissionResult
 from src.copy_format_contract import ExtractedPhrasePair
 
 
@@ -45,17 +45,24 @@ class GroupSubmissionOutcome:
     submitted_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
     skipped_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
     failed_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
+    submitted_items: list[SubmissionOutcomeItem] = field(default_factory=list)
+    skipped_items: list[SubmissionOutcomeItem] = field(default_factory=list)
+    failed_items: list[SubmissionOutcomeItem] = field(default_factory=list)
     error_message: str = ""
 
 
 @dataclass(frozen=True)
 class SubmissionSummary:
+    deck_name: str
     processed_count: int
     submitted_count: int
     skipped_count: int
     failed_count: int
     status_tone: str
     message: str
+    submitted_items: list[SubmissionOutcomeItem] = field(default_factory=list)
+    skipped_items: list[SubmissionOutcomeItem] = field(default_factory=list)
+    failed_items: list[SubmissionOutcomeItem] = field(default_factory=list)
     auto_cleared: bool = False
 
 
@@ -196,11 +203,21 @@ class ReviewWorkspaceController:
                         skipped_count=0,
                         failed_count=len(selected_pairs),
                         failed_pairs=list(selected_pairs),
+                        failed_items=[
+                            SubmissionOutcomeItem(
+                                phrase_pair=phrase_pair,
+                                reason="This item was not written successfully during submission.",
+                            )
+                            for phrase_pair in selected_pairs
+                        ],
                         error_message=str(error).strip(),
                     )
                 )
 
-        latest_submission_summary = self._build_submission_summary(submission_outcomes)
+        latest_submission_summary = self._build_submission_summary(
+            self.state.selected_deck,
+            submission_outcomes,
+        )
         next_state = replace(
             self.state,
             submission_outcomes=submission_outcomes,
@@ -295,6 +312,7 @@ class ReviewWorkspaceController:
 
     @staticmethod
     def _build_submission_summary(
+        deck_name: str,
         submission_outcomes: list[GroupSubmissionOutcome],
     ) -> SubmissionSummary:
         processed_count = sum(
@@ -306,6 +324,15 @@ class ReviewWorkspaceController:
         )
         skipped_count = sum(outcome.skipped_count for outcome in submission_outcomes)
         failed_count = sum(outcome.failed_count for outcome in submission_outcomes)
+        submitted_items = [
+            item for outcome in submission_outcomes for item in outcome.submitted_items
+        ]
+        skipped_items = [
+            item for outcome in submission_outcomes for item in outcome.skipped_items
+        ]
+        failed_items = [
+            item for outcome in submission_outcomes for item in outcome.failed_items
+        ]
 
         status_tone = "submitted"
         message = "本次提交已完成，新增卡片已写入目标 Deck。"
@@ -325,12 +352,16 @@ class ReviewWorkspaceController:
             message = "本次包含新增卡片和重复跳过项。"
 
         return SubmissionSummary(
+            deck_name=deck_name,
             processed_count=processed_count,
             submitted_count=submitted_count,
             skipped_count=skipped_count,
             failed_count=failed_count,
             status_tone=status_tone,
             message=message,
+            submitted_items=submitted_items,
+            skipped_items=skipped_items,
+            failed_items=failed_items,
         )
 
     @staticmethod
@@ -346,6 +377,30 @@ class ReviewWorkspaceController:
             submitted_pairs=list(result.submitted_pairs),
             skipped_pairs=list(result.skipped_pairs),
             failed_pairs=list(result.failed_pairs),
+            submitted_items=list(result.submitted_items)
+            or [
+                SubmissionOutcomeItem(
+                    phrase_pair=phrase_pair,
+                    reason="Written to the selected deck successfully.",
+                )
+                for phrase_pair in result.submitted_pairs
+            ],
+            skipped_items=list(result.skipped_items)
+            or [
+                SubmissionOutcomeItem(
+                    phrase_pair=phrase_pair,
+                    reason="Front already exists in Anki, so this item is skipped to avoid duplicates.",
+                )
+                for phrase_pair in result.skipped_pairs
+            ],
+            failed_items=list(result.failed_items)
+            or [
+                SubmissionOutcomeItem(
+                    phrase_pair=phrase_pair,
+                    reason="This item was not written successfully during submission.",
+                )
+                for phrase_pair in result.failed_pairs
+            ],
         )
 
     @staticmethod
@@ -504,15 +559,53 @@ class ReviewWorkspaceController:
             f'submission-global-banner-{summary.status_tone}" '
             'data-submission-feedback-banner aria-live="polite">'
             '<p class="submission-global-banner-label">提交结果</p>'
-            '<h2 class="submission-global-banner-title">'
-            f"本次处理 {summary.processed_count} 条</h2>"
-            '<p class="submission-global-banner-metrics">'
-            f"已加入 {summary.submitted_count} 条 · "
-            f"已跳过 {summary.skipped_count} 条 · "
-            f"提交失败 {summary.failed_count} 条"
-            "</p>"
+            f'<h2 class="submission-global-banner-title">{escape(self._submission_title(summary.status_tone))}</h2>'
+            '<div class="submission-global-banner-metrics">'
+            f"<span>目标 Deck: {escape(summary.deck_name or '未选择')}</span>"
+            f"<span>本次处理 {summary.processed_count} 条</span>"
+            f"<span>已加入 {summary.submitted_count} 条</span>"
+            f"<span>重复跳过 {summary.skipped_count} 条</span>"
+            f"<span>提交失败 {summary.failed_count} 条</span>"
+            "</div>"
             f'<p class="submission-global-banner-text">{escape(summary.message)}</p>'
+            f"{self._render_summary_bucket('submitted', '本次已加入', summary.submitted_items)}"
+            f"{self._render_summary_bucket('skipped', '重复跳过', summary.skipped_items)}"
+            f"{self._render_summary_bucket('failed', '提交失败', summary.failed_items)}"
             f"{auto_cleared_html}"
+            "</section>"
+        )
+
+    @staticmethod
+    def _submission_title(status_tone: str) -> str:
+        title_by_tone = {
+            "submitted": "已完成提交",
+            "mixed": "已完成提交，包含重复跳过",
+            "skipped": "本次没有新增卡片",
+            "partial": "部分提交成功",
+            "failed": "提交未完成",
+        }
+        return title_by_tone.get(status_tone, "提交结果")
+
+    @staticmethod
+    def _render_summary_bucket(
+        status: str,
+        title: str,
+        items: list[SubmissionOutcomeItem],
+    ) -> str:
+        if not items:
+            return ""
+        items_html = "".join(
+            '<li class="submission-global-item">'
+            f'<span class="submission-global-item-front">{escape(item.phrase_pair.front)}</span>'
+            f'<span class="submission-global-item-back">{escape(item.phrase_pair.back)}</span>'
+            f'<span class="submission-global-item-reason">原因: {escape(item.reason)}</span>'
+            "</li>"
+            for item in items
+        )
+        return (
+            f'<section class="submission-global-detail submission-global-detail-{status}">'
+            f'<h3 class="submission-global-detail-title">{escape(title)}</h3>'
+            f'<ul class="submission-global-detail-list">{items_html}</ul>'
             "</section>"
         )
 
@@ -705,9 +798,9 @@ class ReviewWorkspaceController:
             f'<h3 class="submission-outcome-summary-title">{escape(outcome.input_word)}: 已处理 {total_count} 条</h3>'
             f'<p class="submission-outcome-summary-text">{status_message}</p>'
             "</div>"
-            f"{self._render_outcome_bucket('submitted', outcome.submitted_count, outcome.submitted_pairs)}"
-            f"{self._render_outcome_bucket('skipped', outcome.skipped_count, outcome.skipped_pairs)}"
-            f"{self._render_outcome_bucket('failed', outcome.failed_count, outcome.failed_pairs)}"
+            f"{self._render_outcome_bucket('submitted', outcome.submitted_count, outcome.submitted_items)}"
+            f"{self._render_outcome_bucket('skipped', outcome.skipped_count, outcome.skipped_items)}"
+            f"{self._render_outcome_bucket('failed', outcome.failed_count, outcome.failed_items)}"
             f"{self._render_error_message(outcome.error_message)}"
             "</section>"
         )
@@ -716,24 +809,25 @@ class ReviewWorkspaceController:
     def _render_outcome_bucket(
         status: str,
         count: int,
-        phrase_pairs: list[ExtractedPhrasePair],
+        items: list[SubmissionOutcomeItem],
     ) -> str:
         title_by_status = {
             "submitted": "已加入 Anki",
-            "skipped": "已跳过",
+            "skipped": "重复跳过",
             "failed": "提交失败",
         }
         help_by_status = {
             "submitted": "这些词组已经写入目标 Deck。",
-            "skipped": "这些词组没有新建卡片，通常是 Front 重复或当前未进入最终提交集合。",
+            "skipped": "这些词组没有新建卡片，每条都会写明跳过原因。",
             "failed": "这些词组本次没有成功写入，请检查网络、AnkiConnect 或字段内容。",
         }
         items_html = "".join(
             '<li class="submission-outcome-item">'
-            f'<span class="submission-outcome-front">{escape(phrase_pair.front)}</span>'
-            f'<span class="submission-outcome-back">{escape(phrase_pair.back)}</span>'
+            f'<span class="submission-outcome-front">{escape(item.phrase_pair.front)}</span>'
+            f'<span class="submission-outcome-back">{escape(item.phrase_pair.back)}</span>'
+            f'<span class="submission-outcome-reason">原因: {escape(item.reason)}</span>'
             "</li>"
-            for phrase_pair in phrase_pairs
+            for item in items
         )
         return (
             f'<div class="submission-outcome {status}-outcome">'

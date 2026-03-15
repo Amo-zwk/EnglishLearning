@@ -354,10 +354,14 @@ class WebAppFactoryAdapterTests(unittest.TestCase):
 
         self.assertEqual(status, "200 OK")
         self.assertIn("data-submission-feedback-banner", body)
+        self.assertIn("已完成提交", body)
+        self.assertIn("目标 Deck: Default", body)
         self.assertIn("本次处理 1 条", body)
         self.assertIn("已加入 1 条", body)
-        self.assertIn("已跳过 0 条", body)
+        self.assertIn("重复跳过 0 条", body)
         self.assertIn("提交失败 0 条", body)
+        self.assertIn("本次已加入", body)
+        self.assertIn("原因: Written to the selected deck successfully.", body)
         self.assertIn("已自动清空本轮输入和提取结果", body)
 
     def test_app_factory_renders_generation_failure_message(self) -> None:
@@ -500,9 +504,15 @@ class WebSubmissionRoundtripTests(unittest.TestCase):
         self.assertIn("Full response for deliver.", generated_body)
         self.assertIn("deliver a speech", generated_body)
         self.assertEqual(submit_status, "200 OK")
+        self.assertIn("已完成提交", submitted_body)
         self.assertIn("本次处理 2 条", submitted_body)
         self.assertIn("已加入 2 条", submitted_body)
+        self.assertIn("重复跳过 0 条", submitted_body)
         self.assertIn("提交失败 0 条", submitted_body)
+        self.assertIn("本次已加入", submitted_body)
+        self.assertIn(
+            "原因: Written to the selected deck successfully.", submitted_body
+        )
         self.assertIn("已自动清空本轮输入和提取结果", submitted_body)
         add_notes_calls = [call for call in transport.calls if call[0] == "addNotes"]
         self.assertEqual(len(add_notes_calls), 2)

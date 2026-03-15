@@ -6,7 +6,11 @@ from src.ai_generation_orchestrator import (
     OrchestratedResultGroup,
     orchestrate_generation_requests,
 )
-from src.anki_submission_gateway import AnkiConnectGateway, SubmissionResult
+from src.anki_submission_gateway import (
+    AnkiConnectGateway,
+    SubmissionOutcomeItem,
+    SubmissionResult,
+)
 from src.copy_format_contract import ExtractedPhrasePair
 from src.review_workspace import ReviewWorkspaceController
 
@@ -124,10 +128,35 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
                         failed_pairs=[
                             workspace._build_phrase_pair("deliver value", "创造价值")
                         ],
+                        submitted_items=[
+                            SubmissionOutcomeItem(
+                                phrase_pair=workspace._build_phrase_pair(
+                                    "deliver a speech", "发表演讲"
+                                ),
+                                reason="Written to the selected deck successfully.",
+                            )
+                        ],
+                        skipped_items=[
+                            SubmissionOutcomeItem(
+                                phrase_pair=workspace._build_phrase_pair(
+                                    "deliver keynote", "做主题演讲"
+                                ),
+                                reason="Front already exists in Anki, so this item is skipped to avoid duplicates.",
+                            )
+                        ],
+                        failed_items=[
+                            SubmissionOutcomeItem(
+                                phrase_pair=workspace._build_phrase_pair(
+                                    "deliver value", "创造价值"
+                                ),
+                                reason="AnkiConnect returned an empty note id, so this item was not written successfully.",
+                            )
+                        ],
                     ),
                 )
             ],
             latest_submission_summary=workspace._build_submission_summary(
+                "Default",
                 [
                     workspace._build_group_submission_outcome(
                         input_word="deliver",
@@ -150,17 +179,43 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
                                     "deliver value", "创造价值"
                                 )
                             ],
+                            submitted_items=[
+                                SubmissionOutcomeItem(
+                                    phrase_pair=workspace._build_phrase_pair(
+                                        "deliver a speech", "发表演讲"
+                                    ),
+                                    reason="Written to the selected deck successfully.",
+                                )
+                            ],
+                            skipped_items=[
+                                SubmissionOutcomeItem(
+                                    phrase_pair=workspace._build_phrase_pair(
+                                        "deliver keynote", "做主题演讲"
+                                    ),
+                                    reason="Front already exists in Anki, so this item is skipped to avoid duplicates.",
+                                )
+                            ],
+                            failed_items=[
+                                SubmissionOutcomeItem(
+                                    phrase_pair=workspace._build_phrase_pair(
+                                        "deliver value", "创造价值"
+                                    ),
+                                    reason="AnkiConnect returned an empty note id, so this item was not written successfully.",
+                                )
+                            ],
                         ),
                     )
-                ]
+                ],
             ),
         )
 
         html = workspace.render_html()
 
+        self.assertIn("部分提交成功", html)
+        self.assertIn("目标 Deck: Default", html)
         self.assertIn("本次处理 3 条", html)
         self.assertIn("已加入 1 条", html)
-        self.assertIn("已跳过 1 条", html)
+        self.assertIn("重复跳过 1 条", html)
         self.assertIn("提交失败 1 条", html)
         self.assertIn("当前内容已保留", html)
         self.assertIn('class="submission-outcome submitted-outcome"', html)
@@ -170,10 +225,20 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
             'class="submission-outcome-summary submission-outcome-summary-partial"',
             html,
         )
+        self.assertIn("本次已加入", html)
+        self.assertIn("重复跳过", html)
         self.assertIn("已加入 Anki: 1", html)
-        self.assertIn("已跳过: 1", html)
+        self.assertIn("重复跳过: 1", html)
         self.assertIn("提交失败: 1", html)
         self.assertIn("本组有一部分提交成功，另一部分失败", html)
+        self.assertIn(
+            "原因: Front already exists in Anki, so this item is skipped to avoid duplicates.",
+            html,
+        )
+        self.assertIn(
+            "原因: AnkiConnect returned an empty note id, so this item was not written successfully.",
+            html,
+        )
         self.assertIn("deliver keynote", html)
 
     def test_preserves_reviewed_phrase_edits_when_one_group_submission_fails(
@@ -291,8 +356,13 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
         html = workspace.render_html()
 
         self.assertIn("本次处理 1 条", html)
-        self.assertIn("已跳过 1 条", html)
+        self.assertIn("重复跳过 1 条", html)
         self.assertIn("本次没有新增卡片", html)
+        self.assertIn("重复跳过", html)
+        self.assertIn(
+            "原因: Front already exists in Anki, so this item is skipped to avoid duplicates.",
+            html,
+        )
         self.assertIn("已自动清空本轮输入和提取结果", html)
 
     def test_submits_reviewed_group_into_selected_deck_and_renders_feedback(
@@ -334,6 +404,9 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
         )
         self.assertIn("本次处理 1 条", html)
         self.assertIn("已加入 1 条", html)
+        self.assertIn("目标 Deck: English::考研短语", html)
+        self.assertIn("本次已加入", html)
+        self.assertIn("原因: Written to the selected deck successfully.", html)
         self.assertIn("已自动清空本轮输入和提取结果", html)
         self.assertNotIn("提取结果汇总", html)
 

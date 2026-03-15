@@ -34,6 +34,12 @@ class SubmissionPlan:
 
 
 @dataclass(frozen=True)
+class SubmissionOutcomeItem:
+    phrase_pair: ExtractedPhrasePair
+    reason: str = ""
+
+
+@dataclass(frozen=True)
 class SubmissionResult:
     submitted_count: int
     skipped_count: int
@@ -41,6 +47,9 @@ class SubmissionResult:
     submitted_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
     skipped_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
     failed_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
+    submitted_items: list[SubmissionOutcomeItem] = field(default_factory=list)
+    skipped_items: list[SubmissionOutcomeItem] = field(default_factory=list)
+    failed_items: list[SubmissionOutcomeItem] = field(default_factory=list)
 
 
 def _require_deck_name(deck_name: str) -> str:
@@ -237,19 +246,54 @@ class AnkiConnectGateway:
                 submitted_pairs=[],
                 skipped_pairs=list(submission_plan.skipped_pairs),
                 failed_pairs=[],
+                skipped_items=[
+                    SubmissionOutcomeItem(
+                        phrase_pair=phrase_pair,
+                        reason="Front already exists in Anki, so this item is skipped to avoid duplicates.",
+                    )
+                    for phrase_pair in submission_plan.skipped_pairs
+                ],
             )
 
         add_results = self._transport.invoke("addNotes", {"notes": notes}) or []
         submitted_pairs: list[ExtractedPhrasePair] = []
         failed_pairs: list[ExtractedPhrasePair] = []
+        submitted_items: list[SubmissionOutcomeItem] = []
+        skipped_items = [
+            SubmissionOutcomeItem(
+                phrase_pair=phrase_pair,
+                reason="Front already exists in Anki, so this item is skipped to avoid duplicates.",
+            )
+            for phrase_pair in submission_plan.skipped_pairs
+        ]
+        failed_items: list[SubmissionOutcomeItem] = []
         for phrase_pair, note_id in zip(submission_plan.note_candidates, add_results):
             if note_id is None:
                 failed_pairs.append(phrase_pair)
+                failed_items.append(
+                    SubmissionOutcomeItem(
+                        phrase_pair=phrase_pair,
+                        reason="AnkiConnect returned an empty note id, so this item was not written successfully.",
+                    )
+                )
             else:
                 submitted_pairs.append(phrase_pair)
+                submitted_items.append(
+                    SubmissionOutcomeItem(
+                        phrase_pair=phrase_pair,
+                        reason="Written to the selected deck successfully.",
+                    )
+                )
 
         if len(add_results) < len(submission_plan.note_candidates):
-            failed_pairs.extend(submission_plan.note_candidates[len(add_results) :])
+            for phrase_pair in submission_plan.note_candidates[len(add_results) :]:
+                failed_pairs.append(phrase_pair)
+                failed_items.append(
+                    SubmissionOutcomeItem(
+                        phrase_pair=phrase_pair,
+                        reason="AnkiConnect returned fewer results than expected, so this item is treated as failed.",
+                    )
+                )
 
         submitted_count = len(submitted_pairs)
         failed_count = len(failed_pairs)
@@ -261,4 +305,7 @@ class AnkiConnectGateway:
             submitted_pairs=submitted_pairs,
             skipped_pairs=list(submission_plan.skipped_pairs),
             failed_pairs=failed_pairs,
+            submitted_items=submitted_items,
+            skipped_items=skipped_items,
+            failed_items=failed_items,
         )
