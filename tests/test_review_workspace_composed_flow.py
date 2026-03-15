@@ -127,10 +127,42 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
                     ),
                 )
             ],
+            latest_submission_summary=workspace._build_submission_summary(
+                [
+                    workspace._build_group_submission_outcome(
+                        input_word="deliver",
+                        result=SubmissionResult(
+                            submitted_count=1,
+                            skipped_count=1,
+                            failed_count=1,
+                            submitted_pairs=[
+                                workspace._build_phrase_pair(
+                                    "deliver a speech", "发表演讲"
+                                )
+                            ],
+                            skipped_pairs=[
+                                workspace._build_phrase_pair(
+                                    "deliver keynote", "做主题演讲"
+                                )
+                            ],
+                            failed_pairs=[
+                                workspace._build_phrase_pair(
+                                    "deliver value", "创造价值"
+                                )
+                            ],
+                        ),
+                    )
+                ]
+            ),
         )
 
         html = workspace.render_html()
 
+        self.assertIn("本次处理 3 条", html)
+        self.assertIn("已加入 1 条", html)
+        self.assertIn("已跳过 1 条", html)
+        self.assertIn("提交失败 1 条", html)
+        self.assertIn("当前内容已保留", html)
         self.assertIn('class="submission-outcome submitted-outcome"', html)
         self.assertIn('class="submission-outcome skipped-outcome"', html)
         self.assertIn('class="submission-outcome failed-outcome"', html)
@@ -258,9 +290,10 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
         workspace.submit_selected_pairs()
         html = workspace.render_html()
 
-        self.assertIn("已跳过: 1", html)
-        self.assertIn("deliver keynote", html)
-        self.assertIn('class="submission-outcome skipped-outcome"', html)
+        self.assertIn("本次处理 1 条", html)
+        self.assertIn("已跳过 1 条", html)
+        self.assertIn("本次没有新增卡片", html)
+        self.assertIn("已自动清空本轮输入和提取结果", html)
 
     def test_submits_reviewed_group_into_selected_deck_and_renders_feedback(
         self,
@@ -299,8 +332,10 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
             add_notes_params["notes"][0]["deckName"],
             "English::考研短语",
         )
-        self.assertIn("已加入 Anki: 1", html)
-        self.assertIn("deliver a speech", html)
+        self.assertIn("本次处理 1 条", html)
+        self.assertIn("已加入 1 条", html)
+        self.assertIn("已自动清空本轮输入和提取结果", html)
+        self.assertNotIn("提取结果汇总", html)
 
     def test_submits_edited_phrase_text_instead_of_original_extracted_value(
         self,

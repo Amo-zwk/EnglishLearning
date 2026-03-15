@@ -284,12 +284,16 @@ class WebAppFactoryAdapterTests(unittest.TestCase):
         self.assertIn("filterDeckOptions(searchInput, select, feedback)", body)
         self.assertIn("initDeckSearch()", body)
         self.assertIn("initGenerationPendingState()", body)
+        self.assertIn("initSubmissionPendingState()", body)
         self.assertIn('submitter.value !== "generate"', body)
         self.assertIn("生成中...", body)
+        self.assertIn("提交中...", body)
         self.assertIn(".generate-action.is-pending", body)
+        self.assertIn(".submission-preview-submit-button.is-pending", body)
         self.assertIn('button.classList.add("is-pending")', body)
         self.assertIn('button.setAttribute("aria-disabled", "true")', body)
         self.assertIn("data-generation-pending-banner", body)
+        self.assertIn("data-submission-pending-banner", body)
         self.assertIn("data-deck-search", body)
         self.assertIn("data-deck-selection", body)
         self.assertIn("data-deck-feedback", body)
@@ -304,6 +308,57 @@ class WebAppFactoryAdapterTests(unittest.TestCase):
         self.assertIn("restoreExportOptions(initialExportContainer)", body)
         self.assertIn("saveExportOptions(exportContainer)", body)
         self.assertIn('class="review-overview"', body)
+
+    def test_submit_response_includes_top_level_submission_feedback_banner(
+        self,
+    ) -> None:
+        submit_action = lambda deck_name, phrase_pairs: SubmissionResult(
+            submitted_count=len(phrase_pairs),
+            skipped_count=0,
+            failed_count=0,
+            submitted_pairs=list(phrase_pairs),
+            skipped_pairs=[],
+            failed_pairs=[],
+        )
+
+        dependencies = WebAppDependencies(
+            generation_callable=lambda input_word: {
+                "content": (
+                    f"Full response for {input_word}.\n"
+                    f"(复制专用: ${input_word} phrase$ ${input_word} 含义$)"
+                )
+            },
+            list_decks_action=lambda: ["Default"],
+            submit_action=submit_action,
+        )
+        app = create_web_app(dependencies=dependencies)
+
+        call_wsgi_app(
+            app,
+            build_wsgi_environ(
+                method="POST", body=b"action=generate&input_word_0=deliver"
+            ),
+        )
+        status, _headers, body = call_wsgi_app(
+            app,
+            build_wsgi_environ(
+                method="POST",
+                body=(
+                    b"action=submit&selected_deck=Default"
+                    b"&phrase_selected_0_0=true"
+                    b"&phrase_front_0_0=deliver+phrase"
+                    b"&phrase_back_0_0=deliver+%E5%90%AB%E4%B9%89"
+                ),
+            ),
+        )
+
+        self.assertEqual(status, "200 OK")
+        self.assertIn("data-submission-feedback-banner", body)
+        self.assertIn("本次处理 1 条", body)
+        self.assertIn("已加入 1 条", body)
+        self.assertIn("已跳过 0 条", body)
+        self.assertIn("提交失败 0 条", body)
+        self.assertIn("已自动清空本轮输入和提取结果", body)
 
     def test_app_factory_renders_generation_failure_message(self) -> None:
         def generation_endpoint(input_word: str) -> dict[str, str]:
@@ -445,8 +500,10 @@ class WebSubmissionRoundtripTests(unittest.TestCase):
         self.assertIn("Full response for deliver.", generated_body)
         self.assertIn("deliver a speech", generated_body)
         self.assertEqual(submit_status, "200 OK")
-        self.assertIn("已加入 Anki: 1", submitted_body)
-        self.assertIn("claim a speech", submitted_body)
+        self.assertIn("本次处理 2 条", submitted_body)
+        self.assertIn("已加入 2 条", submitted_body)
+        self.assertIn("提交失败 0 条", submitted_body)
+        self.assertIn("已自动清空本轮输入和提取结果", submitted_body)
         add_notes_calls = [call for call in transport.calls if call[0] == "addNotes"]
         self.assertEqual(len(add_notes_calls), 2)
 

@@ -320,14 +320,45 @@ def render_page(workspace_html: str) -> str:
             box-shadow: 0 10px 24px rgba(61, 102, 129, 0.1);
         }}
         .generation-pending-banner.is-visible {{ display: grid; gap: 6px; }}
+        .submission-pending-banner {{
+            display: none;
+            margin: 0 0 20px;
+            padding: 16px 18px;
+            border-radius: 22px;
+            border: 1px solid rgba(115, 132, 78, 0.2);
+            background: linear-gradient(135deg, rgba(241, 246, 228, 0.96) 0%, rgba(249, 251, 242, 0.94) 100%);
+            color: #445b22;
+            box-shadow: 0 10px 24px rgba(94, 117, 55, 0.1);
+        }}
+        .submission-pending-banner.is-visible {{ display: grid; gap: 6px; }}
         .generation-pending-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.78; }}
         .generation-pending-text {{ margin: 0; font-size: 16px; line-height: 1.6; font-weight: 700; }}
+        .submission-pending-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.78; }}
+        .submission-pending-text {{ margin: 0; font-size: 16px; line-height: 1.6; font-weight: 700; }}
         .generate-action.is-pending,
-        .action-bar button[value="generate"].is-pending {{
+        .action-bar button[value="generate"].is-pending,
+        .submission-preview-submit-button.is-pending,
+        .action-bar button[value="submit"].is-pending {{
             opacity: 0.72;
             pointer-events: none;
             filter: saturate(0.92);
         }}
+        .submission-global-banner {{
+            display: grid;
+            gap: 8px;
+            margin-bottom: 18px;
+            padding: 18px 20px;
+            border-radius: var(--radius-xl);
+            border: 1px solid rgba(145, 112, 76, 0.12);
+            box-shadow: 0 14px 30px rgba(62, 41, 22, 0.08);
+            background: rgba(255, 251, 243, 0.96);
+        }}
+        .submission-global-banner-submitted {{ background: linear-gradient(135deg, rgba(227, 244, 232, 0.98) 0%, rgba(242, 249, 244, 0.96) 100%); color: #244b2e; }}
+        .submission-global-banner-mixed, .submission-global-banner-skipped {{ background: linear-gradient(135deg, rgba(251, 241, 214, 0.98) 0%, rgba(255, 248, 230, 0.96) 100%); color: #694d14; }}
+        .submission-global-banner-partial, .submission-global-banner-failed {{ background: linear-gradient(135deg, rgba(252, 229, 222, 0.98) 0%, rgba(255, 242, 238, 0.96) 100%); color: #702f1f; }}
+        .submission-global-banner-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.82; }}
+        .submission-global-banner-title {{ margin: 0; font-size: clamp(24px, 4vw, 32px); }}
+        .submission-global-banner-metrics, .submission-global-banner-text {{ margin: 0; line-height: 1.6; font-weight: 700; }}
         button {{
             border: 0;
             border-radius: 999px;
@@ -454,7 +485,7 @@ def render_page(workspace_html: str) -> str:
             <h1>英语词组制卡工作台</h1>
             <p class=\"page-intro\">输入一个或多个单词，生成完整解析，核对复制专用提取结果，再把真正有价值的词组送进你的 Anki Deck。</p>
         </section>
-        <form method=\"post\"><div class=\"generation-pending-banner\" data-generation-pending-banner aria-live=\"polite\"><p class=\"generation-pending-label\">生成中</p><p class=\"generation-pending-text\">正在等待 AI 返回结果，请稍候，页面会在完成后自动刷新。</p></div>{workspace_html}<div class=\"action-bar\"><button type=\"submit\" name=\"action\" value=\"add-input\" class=\"secondary-action\">新增输入框</button><button type=\"submit\" name=\"action\" value=\"generate\">开始生成</button><button type=\"submit\" name=\"action\" value=\"submit\">提交选中词组</button></div></form>
+        <form method=\"post\"><div class=\"generation-pending-banner\" data-generation-pending-banner aria-live=\"polite\"><p class=\"generation-pending-label\">生成中</p><p class=\"generation-pending-text\">正在等待 AI 返回结果，请稍候，页面会在完成后自动刷新。</p></div><div class=\"submission-pending-banner\" data-submission-pending-banner aria-live=\"polite\"><p class=\"submission-pending-label\">提交中</p><p class=\"submission-pending-text\">正在提交选中词组到 Anki，请稍候，完成后会在页面顶部显示结果摘要。</p></div>{workspace_html}<div class=\"action-bar\"><button type=\"submit\" name=\"action\" value=\"add-input\" class=\"secondary-action\">新增输入框</button><button type=\"submit\" name=\"action\" value=\"generate\">开始生成</button><button type=\"submit\" name=\"action\" value=\"submit\">提交选中词组</button></div></form>
     </main>
     <script>
         var EXPORT_OPTION_STORAGE_KEY = "copy-format-export-options";
@@ -756,6 +787,31 @@ def render_page(workspace_html: str) -> str:
             }});
         }}
 
+        function initSubmissionPendingState() {{
+            var form = document.querySelector("form");
+            if (!(form instanceof HTMLFormElement)) {{
+                return;
+            }}
+            form.addEventListener("submit", function(event) {{
+                var submitEvent = event;
+                var submitter = submitEvent.submitter;
+                if (!(submitter instanceof HTMLButtonElement) || submitter.value !== "submit") {{
+                    return;
+                }}
+                var banner = form.querySelector("[data-submission-pending-banner]");
+                if (banner instanceof HTMLElement) {{
+                    banner.classList.add("is-visible");
+                }}
+                form.querySelectorAll('button[name="action"][value="submit"]').forEach(function(button) {{
+                    if (button instanceof HTMLButtonElement) {{
+                        button.classList.add("is-pending");
+                        button.setAttribute("aria-disabled", "true");
+                        button.textContent = "提交中...";
+                    }}
+                }});
+            }});
+        }}
+
         function activateExportFormat(button) {{
             var format = button.getAttribute("data-export-format");
             if (!format) {{
@@ -863,6 +919,7 @@ def render_page(workspace_html: str) -> str:
         }}
         initDeckSearch();
         initGenerationPendingState();
+        initSubmissionPendingState();
         refreshCopyExportArea();
     </script>
 </body>

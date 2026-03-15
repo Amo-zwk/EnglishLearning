@@ -331,6 +331,75 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
         self.assertNotIn("   - 空白短语", html)
         self.assertNotIn("\t空白短语", html)
 
+    def test_successful_submit_clears_inputs_and_results_but_keeps_top_feedback(
+        self,
+    ) -> None:
+        workspace = ReviewWorkspaceController(
+            generation_action=lambda input_words: [
+                OrchestratedResultGroup(
+                    input_word="deliver",
+                    full_ai_response="Full response for deliver.",
+                    extracted_phrases=[
+                        ExtractedPhrasePair(front="deliver a speech", back="发表演讲")
+                    ],
+                )
+            ],
+            list_decks_action=lambda: ["Default"],
+            submit_action=lambda deck_name, phrase_pairs: SubmissionResult(
+                submitted_count=len(phrase_pairs),
+                skipped_count=0,
+                failed_count=0,
+                submitted_pairs=list(phrase_pairs),
+                skipped_pairs=[],
+                failed_pairs=[],
+            ),
+        )
+
+        workspace.update_input_block(0, "deliver")
+        workspace.generate_results()
+        workspace.select_deck("Default")
+        workspace.submit_selected_pairs()
+
+        html = workspace.render_html()
+
+        self.assertIn("data-submission-feedback-banner", html)
+        self.assertIn("本次处理 1 条", html)
+        self.assertIn("已加入 1 条", html)
+        self.assertIn("已自动清空本轮输入和提取结果，可以直接开始下一批。", html)
+        self.assertNotIn("提取结果汇总", html)
+        self.assertNotIn("最终提交预览", html)
+        self.assertNotIn("deliver a speech", html)
+
+    def test_failed_submit_keeps_current_results_for_follow_up(self) -> None:
+        workspace = ReviewWorkspaceController(
+            generation_action=lambda input_words: [
+                OrchestratedResultGroup(
+                    input_word="claim",
+                    full_ai_response="Full response for claim.",
+                    extracted_phrases=[
+                        ExtractedPhrasePair(front="claim damages", back="索赔")
+                    ],
+                )
+            ],
+            list_decks_action=lambda: ["Default"],
+            submit_action=lambda deck_name, phrase_pairs: (_ for _ in ()).throw(
+                RuntimeError("AnkiConnect offline")
+            ),
+        )
+
+        workspace.update_input_block(0, "claim")
+        workspace.generate_results()
+        workspace.select_deck("Default")
+        workspace.submit_selected_pairs()
+
+        html = workspace.render_html()
+
+        self.assertIn("data-submission-feedback-banner", html)
+        self.assertIn("提交失败 1 条", html)
+        self.assertIn("当前内容已保留", html)
+        self.assertIn("提取结果汇总", html)
+        self.assertIn("claim damages", html)
+
     def test_locked_duplicate_replaces_unlocked_duplicate_in_export_and_preview(
         self,
     ) -> None:

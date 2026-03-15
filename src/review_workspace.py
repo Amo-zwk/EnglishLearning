@@ -33,6 +33,7 @@ class ReviewWorkspaceState:
     locked_pairs_by_group: list[list[bool]] = field(default_factory=list)
     submission_outcomes: list[GroupSubmissionOutcome] = field(default_factory=list)
     last_generation_duration_seconds: float | None = None
+    latest_submission_summary: SubmissionSummary | None = None
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,17 @@ class GroupSubmissionOutcome:
     error_message: str = ""
 
 
+@dataclass(frozen=True)
+class SubmissionSummary:
+    processed_count: int
+    submitted_count: int
+    skipped_count: int
+    failed_count: int
+    status_tone: str
+    message: str
+    auto_cleared: bool = False
+
+
 class ReviewWorkspaceController:
     def __init__(
         self,
@@ -56,6 +68,7 @@ class ReviewWorkspaceController:
         initial_input_count: int = 1,
     ) -> None:
         safe_input_count = max(initial_input_count, 1)
+        self._initial_input_count = safe_input_count
         self._generation_action = generation_action
         self._list_decks_action = list_decks_action
         self._submit_action = submit_action
@@ -97,6 +110,7 @@ class ReviewWorkspaceController:
             locked_pairs_by_group=locked_pairs_by_group,
             submission_outcomes=[],
             last_generation_duration_seconds=generation_duration_seconds,
+            latest_submission_summary=None,
         )
         return result_groups
 
@@ -186,7 +200,27 @@ class ReviewWorkspaceController:
                     )
                 )
 
-        self.state = replace(self.state, submission_outcomes=submission_outcomes)
+        latest_submission_summary = self._build_submission_summary(submission_outcomes)
+        next_state = replace(
+            self.state,
+            submission_outcomes=submission_outcomes,
+            latest_submission_summary=latest_submission_summary,
+        )
+        if latest_submission_summary.failed_count == 0:
+            next_state = replace(
+                next_state,
+                input_blocks=[InputBlock() for _ in range(self._initial_input_count)],
+                result_groups=[],
+                selected_pairs_by_group=[],
+                locked_pairs_by_group=[],
+                submission_outcomes=[],
+                last_generation_duration_seconds=None,
+                latest_submission_summary=replace(
+                    latest_submission_summary,
+                    auto_cleared=True,
+                ),
+            )
+        self.state = next_state
         return submission_outcomes
 
     def render_html(self) -> str:
@@ -206,6 +240,7 @@ class ReviewWorkspaceController:
         review_overview_html = self._render_review_overview()
         return (
             '<section class="review-workspace">'
+            f"{self._render_latest_submission_summary()}"
             '<div class="input-blocks">'
             f"{input_blocks_html}"
             "</div>"
@@ -256,6 +291,46 @@ class ReviewWorkspaceController:
             '<div class="review-overview-metric"><span class="review-overview-label">锁定优先</span>'
             f'<strong class="review-overview-value">{locked_count}</strong></div>'
             "</section>"
+        )
+
+    @staticmethod
+    def _build_submission_summary(
+        submission_outcomes: list[GroupSubmissionOutcome],
+    ) -> SubmissionSummary:
+        processed_count = sum(
+            outcome.submitted_count + outcome.skipped_count + outcome.failed_count
+            for outcome in submission_outcomes
+        )
+        submitted_count = sum(
+            outcome.submitted_count for outcome in submission_outcomes
+        )
+        skipped_count = sum(outcome.skipped_count for outcome in submission_outcomes)
+        failed_count = sum(outcome.failed_count for outcome in submission_outcomes)
+
+        status_tone = "submitted"
+        message = "本次提交已完成，新增卡片已写入目标 Deck。"
+        if failed_count and submitted_count:
+            status_tone = "partial"
+            message = "本次提交部分成功、部分失败，当前内容已保留，方便继续检查失败项。"
+        elif failed_count and not submitted_count:
+            status_tone = "failed"
+            message = (
+                "本次提交失败，当前内容已保留，请检查 AnkiConnect、网络或字段内容。"
+            )
+        elif skipped_count and not submitted_count:
+            status_tone = "skipped"
+            message = "本次没有新增卡片，通常是重复项或当前没有可提交内容。"
+        elif skipped_count:
+            status_tone = "mixed"
+            message = "本次包含新增卡片和重复跳过项。"
+
+        return SubmissionSummary(
+            processed_count=processed_count,
+            submitted_count=submitted_count,
+            skipped_count=skipped_count,
+            failed_count=failed_count,
+            status_tone=status_tone,
+            message=message,
         )
 
     @staticmethod
@@ -410,6 +485,34 @@ class ReviewWorkspaceController:
             f'data-failure-status="{status}" aria-live="polite">'
             '<p class="generation-failure-label">生成失败</p>'
             f'<p class="generation-failure-message">{message}</p>'
+            "</section>"
+        )
+
+    def _render_latest_submission_summary(self) -> str:
+        summary = self.state.latest_submission_summary
+        if summary is None:
+            return ""
+        auto_cleared_html = ""
+        if summary.auto_cleared:
+            auto_cleared_html = (
+                '<p class="submission-global-banner-text">'
+                "已自动清空本轮输入和提取结果，可以直接开始下一批。"
+                "</p>"
+            )
+        return (
+            '<section class="submission-global-banner '
+            f'submission-global-banner-{summary.status_tone}" '
+            'data-submission-feedback-banner aria-live="polite">'
+            '<p class="submission-global-banner-label">提交结果</p>'
+            '<h2 class="submission-global-banner-title">'
+            f"本次处理 {summary.processed_count} 条</h2>"
+            '<p class="submission-global-banner-metrics">'
+            f"已加入 {summary.submitted_count} 条 · "
+            f"已跳过 {summary.skipped_count} 条 · "
+            f"提交失败 {summary.failed_count} 条"
+            "</p>"
+            f'<p class="submission-global-banner-text">{escape(summary.message)}</p>'
+            f"{auto_cleared_html}"
             "</section>"
         )
 
