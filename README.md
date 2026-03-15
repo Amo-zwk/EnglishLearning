@@ -4,6 +4,15 @@
 
 EnglishLearning is a personal English phrase card workspace. You enter one or more English words, generate full explanations with Gemini, extract phrase pairs from a copy-only format, review the results, and then submit selected cards to Anki.
 
+## Quick View
+
+- Multi-word input blocks for batch generation
+- Full AI response kept visible for manual review
+- Editable phrase pairs before submission
+- Card-based final submission preview
+- Duplicate `Front` handling with manual lock priority
+- Local Anki deck selection through AnkiConnect
+
 ## What It Does
 
 - Generates full AI explanations for one or more input words
@@ -21,6 +30,25 @@ EnglishLearning is a personal English phrase card workspace. You enter one or mo
 5. Optionally uncheck low-value pairs or lock a duplicate `Front` to keep a preferred version.
 6. Preview the final submission cards.
 7. Select a target deck and submit to Anki.
+
+## Example Session
+
+Input words:
+
+```text
+take
+bring
+```
+
+What you review on the page:
+
+- The full Gemini response for each input word
+- Extracted phrase pairs from the copy-only format
+- Checkboxes for whether each pair should be submitted
+- Lock controls for choosing the preferred item when duplicate `Front` values appear
+- A card-based preview of the exact notes that will be sent to Anki
+
+This keeps the AI output visible while still letting you manually curate the final study cards.
 
 ## Key Rules
 
