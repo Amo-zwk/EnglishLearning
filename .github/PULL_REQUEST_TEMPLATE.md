@@ -10,7 +10,6 @@
 
 - Generation
 - Review workspace
-- Session save or restore
 - Anki submission
 - Documentation only
 

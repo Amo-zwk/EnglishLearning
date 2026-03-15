@@ -55,14 +55,13 @@ If `uv` does not work on your machine yet, read [`Install Python And uv By OS`](
 
 ## Quick View
 
-- Multi-word input blocks for batch generation
-- Sticky review overview for larger review batches
-- Full AI response kept visible for manual review
-- Editable phrase pairs before submission
-- Card-based final submission preview
+- Multiple input blocks for one batch
+- Full AI response and extracted pairs shown together
+- Editable `Front` and `Back` before submission
+- Sticky overview plus card-based final preview
 - Duplicate `Front` handling with manual lock priority
-- Clearer Anki submission feedback for submitted, skipped, and failed items
-- Local Anki deck selection through AnkiConnect
+- Clearer feedback for submitted, skipped, and failed cards
+- Local deck selection through AnkiConnect
 
 ## Screenshot
 
@@ -73,8 +72,8 @@ If `uv` does not work on your machine yet, read [`Install Python And uv By OS`](
 - Generates full AI explanations for one or more input words
 - Extracts phrase pairs from the special copy format output
 - Lets you review, edit, select, and lock duplicate `Front` values before submission
-- Keeps a review summary visible while you work through larger batches
-- Shows the final Anki submission set with a card-based preview
+- Keeps the current review counts visible during larger batches
+- Shows the exact final Anki submission set with a card-based preview
 - Shows clearer post-submit feedback with grouped submitted, skipped, and failed results
 - Submits selected phrase pairs to Anki through AnkiConnect
 
@@ -112,7 +111,7 @@ This keeps the AI output visible while still letting you manually curate the fin
 
 ## Interface Highlights
 
-Even without a bundled screenshot, the review page is organized around a few practical panels:
+The review page is organized around a small set of practical panels:
 
 - input blocks for one or more words
 - a sticky review overview for batch progress

@@ -28,7 +28,6 @@ Describe the bug briefly. 也可以直接用中文说明。
 
 - Generation
 - Review workspace
-- Session save or restore
 - Anki submission
 - Documentation
 
