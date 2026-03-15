@@ -189,6 +189,12 @@ These files are part of the intended project setup:
 
 The prompt file is versioned because the generation contract depends on it.
 
+Why this prompt must stay fixed:
+
+- The extractor depends on the copy-only output pattern produced by this prompt.
+- Review, duplicate handling, preview, and Anki submission all assume that stable output contract.
+- Replacing the prompt is likely to break extraction quality or the `Front` and `Back` mapping, even if generation still returns fluent text.
+
 ## Local Files Kept Out Of Git
 
 These files are intentionally ignored:
