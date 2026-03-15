@@ -1,0 +1,195 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import json
+from typing import Any, Callable, Protocol
+from urllib import request
+
+from src.copy_format_contract import ExtractedPhrasePair
+
+
+ANKI_CONNECT_URL = "http://127.0.0.1:8765"
+ANKI_CONNECT_VERSION = 6
+
+
+class MissingDeckSelectionError(ValueError):
+    pass
+
+
+class AnkiConnectTransport(Protocol):
+    def invoke(self, action: str, params: dict[str, Any] | None = None) -> Any: ...
+
+
+@dataclass(frozen=True)
+class SubmissionPlan:
+    skipped_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
+    note_candidates: list[ExtractedPhrasePair] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class SubmissionResult:
+    submitted_count: int
+    skipped_count: int
+    failed_count: int
+    submitted_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
+    skipped_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
+    failed_pairs: list[ExtractedPhrasePair] = field(default_factory=list)
+
+
+def _require_deck_name(deck_name: str) -> str:
+    normalized_deck_name = deck_name.strip()
+    if not normalized_deck_name:
+        raise MissingDeckSelectionError(
+            "A target deck must be selected before creating Anki notes."
+        )
+    return normalized_deck_name
+
+
+def _escape_anki_query_value(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def build_front_duplicate_query(front_value: str) -> str:
+    escaped_front = _escape_anki_query_value(front_value)
+    return f'Front:"{escaped_front}"'
+
+
+def plan_phrase_submission(
+    phrase_pairs: list[ExtractedPhrasePair],
+    existing_fronts: set[str],
+) -> SubmissionPlan:
+    skipped_pairs: list[ExtractedPhrasePair] = []
+    note_candidates: list[ExtractedPhrasePair] = []
+
+    for phrase_pair in phrase_pairs:
+        if phrase_pair.front in existing_fronts:
+            skipped_pairs.append(phrase_pair)
+            continue
+        note_candidates.append(phrase_pair)
+
+    return SubmissionPlan(
+        skipped_pairs=skipped_pairs,
+        note_candidates=note_candidates,
+    )
+
+
+def build_basic_notes(
+    deck_name: str,
+    phrase_pairs: list[ExtractedPhrasePair],
+) -> list[dict[str, Any]]:
+    selected_deck = _require_deck_name(deck_name)
+    return [
+        {
+            "deckName": selected_deck,
+            "modelName": "Basic",
+            "fields": {"Front": phrase_pair.front, "Back": phrase_pair.back},
+        }
+        for phrase_pair in phrase_pairs
+    ]
+
+
+class AnkiConnectHttpClient:
+    def __init__(
+        self,
+        base_url: str = ANKI_CONNECT_URL,
+        version: int = ANKI_CONNECT_VERSION,
+        post_json: Callable[[str, dict[str, Any]], dict[str, Any]] | None = None,
+    ) -> None:
+        self._base_url = base_url
+        self._version = version
+        self._post_json = post_json or self._default_post_json
+
+    def invoke(self, action: str, params: dict[str, Any] | None = None) -> Any:
+        payload = {
+            "action": action,
+            "version": self._version,
+            "params": params or {},
+        }
+        response = self._post_json(self._base_url, payload)
+
+        if response.get("error") is not None:
+            raise RuntimeError(f"AnkiConnect error for {action}: {response['error']}")
+
+        return response.get("result")
+
+    @staticmethod
+    def _default_post_json(url: str, payload: dict[str, Any]) -> dict[str, Any]:
+        request_body = json.dumps(payload).encode("utf-8")
+        http_request = request.Request(
+            url,
+            data=request_body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(http_request) as http_response:
+            response_body = http_response.read().decode("utf-8")
+        return json.loads(response_body)
+
+
+class AnkiConnectGateway:
+    def __init__(self, transport: AnkiConnectTransport) -> None:
+        self._transport = transport
+
+    def list_deck_names(self) -> list[str]:
+        deck_names = self._transport.invoke("deckNames", {})
+        return list(deck_names or [])
+
+    def lookup_existing_fronts(
+        self,
+        phrase_pairs: list[ExtractedPhrasePair],
+    ) -> set[str]:
+        existing_fronts: set[str] = set()
+
+        for phrase_pair in phrase_pairs:
+            note_ids = self._transport.invoke(
+                "findNotes",
+                {"query": build_front_duplicate_query(phrase_pair.front)},
+            )
+            if note_ids:
+                existing_fronts.add(phrase_pair.front)
+
+        return existing_fronts
+
+    def submit_phrase_pairs(
+        self,
+        deck_name: str,
+        phrase_pairs: list[ExtractedPhrasePair],
+    ) -> SubmissionResult:
+        _require_deck_name(deck_name)
+        existing_fronts = self.lookup_existing_fronts(phrase_pairs)
+        submission_plan = plan_phrase_submission(phrase_pairs, existing_fronts)
+        notes = build_basic_notes(deck_name, submission_plan.note_candidates)
+
+        if not notes:
+            return SubmissionResult(
+                submitted_count=0,
+                skipped_count=len(submission_plan.skipped_pairs),
+                failed_count=0,
+                submitted_pairs=[],
+                skipped_pairs=list(submission_plan.skipped_pairs),
+                failed_pairs=[],
+            )
+
+        add_results = self._transport.invoke("addNotes", {"notes": notes}) or []
+        submitted_pairs: list[ExtractedPhrasePair] = []
+        failed_pairs: list[ExtractedPhrasePair] = []
+        for phrase_pair, note_id in zip(submission_plan.note_candidates, add_results):
+            if note_id is None:
+                failed_pairs.append(phrase_pair)
+            else:
+                submitted_pairs.append(phrase_pair)
+
+        if len(add_results) < len(submission_plan.note_candidates):
+            failed_pairs.extend(submission_plan.note_candidates[len(add_results) :])
+
+        submitted_count = len(submitted_pairs)
+        failed_count = len(failed_pairs)
+
+        return SubmissionResult(
+            submitted_count=submitted_count,
+            skipped_count=len(submission_plan.skipped_pairs),
+            failed_count=failed_count,
+            submitted_pairs=submitted_pairs,
+            skipped_pairs=list(submission_plan.skipped_pairs),
+            failed_pairs=failed_pairs,
+        )

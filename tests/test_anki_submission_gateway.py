@@ -1,0 +1,210 @@
+import unittest
+
+from src.copy_format_contract import ExtractedPhrasePair
+from src.anki_submission_gateway import (
+    AnkiConnectGateway,
+    AnkiConnectHttpClient,
+    MissingDeckSelectionError,
+    build_basic_notes,
+    plan_phrase_submission,
+)
+
+
+class RecordingTransport:
+    def __init__(self, responses_by_action):
+        self.responses_by_action = responses_by_action
+        self.calls = []
+
+    def invoke(self, action: str, params=None):
+        self.calls.append((action, params))
+        response = self.responses_by_action[action]
+
+        if callable(response):
+            return response(params)
+
+        return response
+
+
+class AnkiGatewayUnitTests(unittest.TestCase):
+    def test_returns_selectable_deck_list_without_altering_names(self) -> None:
+        gateway = AnkiConnectGateway(
+            RecordingTransport(
+                {
+                    "deckNames": [
+                        "Default",
+                        "English::考研短语",
+                        "中文 Deck With Space",
+                    ],
+                }
+            )
+        )
+
+        deck_names = gateway.list_deck_names()
+
+        self.assertEqual(
+            deck_names,
+            ["Default", "English::考研短语", "中文 Deck With Space"],
+        )
+
+    def test_returns_empty_selectable_deck_list_when_anki_has_no_decks(self) -> None:
+        gateway = AnkiConnectGateway(RecordingTransport({"deckNames": []}))
+
+        self.assertEqual(gateway.list_deck_names(), [])
+
+    def test_marks_duplicate_front_as_skipped_before_note_creation(self) -> None:
+        phrase_pairs = [
+            ExtractedPhrasePair(front="abandon ship", back="弃船"),
+            ExtractedPhrasePair(front="bear responsibility", back="承担责任"),
+        ]
+
+        plan = plan_phrase_submission(
+            phrase_pairs=phrase_pairs,
+            existing_fronts={"abandon ship"},
+        )
+
+        self.assertEqual(plan.skipped_pairs, [phrase_pairs[0]])
+        self.assertEqual(plan.note_candidates, [phrase_pairs[1]])
+
+    def test_marks_all_duplicates_as_skipped_when_every_front_exists(self) -> None:
+        phrase_pairs = [
+            ExtractedPhrasePair(front="abandon ship", back="弃船"),
+            ExtractedPhrasePair(front="bear responsibility", back="承担责任"),
+        ]
+
+        plan = plan_phrase_submission(
+            phrase_pairs=phrase_pairs,
+            existing_fronts={"abandon ship", "bear responsibility"},
+        )
+
+        self.assertEqual(plan.skipped_pairs, phrase_pairs)
+        self.assertEqual(plan.note_candidates, [])
+
+    def test_builds_basic_notes_with_front_and_back_fields(self) -> None:
+        notes = build_basic_notes(
+            deck_name="English::考研短语",
+            phrase_pairs=[
+                ExtractedPhrasePair(front="abandon ship", back="弃船"),
+                ExtractedPhrasePair(front="bear responsibility", back="承担责任"),
+            ],
+        )
+
+        self.assertEqual(
+            notes,
+            [
+                {
+                    "deckName": "English::考研短语",
+                    "modelName": "Basic",
+                    "fields": {"Front": "abandon ship", "Back": "弃船"},
+                },
+                {
+                    "deckName": "English::考研短语",
+                    "modelName": "Basic",
+                    "fields": {"Front": "bear responsibility", "Back": "承担责任"},
+                },
+            ],
+        )
+
+    def test_requires_explicit_deck_selection_before_note_creation(self) -> None:
+        with self.assertRaises(MissingDeckSelectionError):
+            build_basic_notes(
+                deck_name="",
+                phrase_pairs=[ExtractedPhrasePair(front="abandon ship", back="弃船")],
+            )
+
+    def test_reports_submitted_skipped_and_failed_counts_separately(self) -> None:
+        transport = RecordingTransport(
+            {
+                "findNotes": lambda params: (
+                    [101] if "abandon ship" in params["query"] else []
+                ),
+                "addNotes": [2001, None],
+            }
+        )
+        gateway = AnkiConnectGateway(transport)
+
+        result = gateway.submit_phrase_pairs(
+            deck_name="English::考研短语",
+            phrase_pairs=[
+                ExtractedPhrasePair(front="abandon ship", back="弃船"),
+                ExtractedPhrasePair(front="bear responsibility", back="承担责任"),
+                ExtractedPhrasePair(front="claim damages", back="索赔"),
+            ],
+        )
+
+        self.assertEqual(result.submitted_count, 1)
+        self.assertEqual(result.skipped_count, 1)
+        self.assertEqual(result.failed_count, 1)
+
+
+class AnkiGatewayIntegrationTests(unittest.TestCase):
+    def test_uses_real_extracted_phrase_shape_to_build_valid_note_payloads(
+        self,
+    ) -> None:
+        phrase_pairs = [
+            ExtractedPhrasePair(front="deliver a speech", back="发表演讲"),
+            ExtractedPhrasePair(front="deliver results", back="取得成果"),
+        ]
+
+        notes = build_basic_notes(deck_name="Default", phrase_pairs=phrase_pairs)
+
+        self.assertEqual(notes[0]["fields"]["Front"], "deliver a speech")
+        self.assertEqual(notes[0]["fields"]["Back"], "发表演讲")
+        self.assertEqual(notes[1]["fields"]["Front"], "deliver results")
+        self.assertEqual(notes[1]["modelName"], "Basic")
+
+    def test_queries_real_deck_names_through_transport_contract(self) -> None:
+        transport = RecordingTransport({"deckNames": ["Default", "English::考研短语"]})
+        gateway = AnkiConnectGateway(transport)
+
+        deck_names = gateway.list_deck_names()
+
+        self.assertEqual(deck_names, ["Default", "English::考研短语"])
+        self.assertEqual(transport.calls, [("deckNames", {})])
+
+    def test_skips_existing_front_instead_of_attempting_add(self) -> None:
+        transport = RecordingTransport(
+            {
+                "findNotes": [999],
+                "addNotes": lambda params: self.fail("addNotes should not be called"),
+            }
+        )
+        gateway = AnkiConnectGateway(transport)
+
+        result = gateway.submit_phrase_pairs(
+            deck_name="Default",
+            phrase_pairs=[
+                ExtractedPhrasePair(front="deliver a speech", back="发表演讲")
+            ],
+        )
+
+        self.assertEqual(result.submitted_count, 0)
+        self.assertEqual(result.skipped_count, 1)
+        self.assertEqual(result.failed_count, 0)
+
+
+class AnkiConnectHttpClientTests(unittest.TestCase):
+    def test_builds_ankiconnect_request_envelope_for_deck_names(self) -> None:
+        recorded_requests = []
+
+        def fake_post(url: str, payload: dict):
+            recorded_requests.append((url, payload))
+            return {"result": ["Default"], "error": None}
+
+        client = AnkiConnectHttpClient(post_json=fake_post)
+
+        result = client.invoke("deckNames", {})
+
+        self.assertEqual(result, ["Default"])
+        self.assertEqual(
+            recorded_requests,
+            [
+                (
+                    "http://127.0.0.1:8765",
+                    {"action": "deckNames", "version": 6, "params": {}},
+                )
+            ],
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

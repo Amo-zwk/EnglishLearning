@@ -1,0 +1,560 @@
+================================================================================
+
+TASK ID: task-006
+TASK NAME: Add Runnable HTML Web Entry
+STATUS: complete
+TIMESTAMP: 2026-03-14T14:15:17Z
+================================================================================
+OBJECTIVE (Acceptance Criteria):
+   The project must expose a runnable local web entrypoint that starts an HTTP
+   server and serves HTML in a browser. The HTML page must support multiple
+   input blocks, explicit generation, full AI response display, extracted
+   copy-format review, inline edits, deck selection, and submission through the
+   existing workspace flow. The HTTP layer must reuse the existing Python
+   orchestration and Anki gateway modules instead of duplicating business logic.
+   The generation API connection should be configurable through a clear adapter
+   or environment seam. The project must include concise run instructions that
+   explain how to start the site and what local prerequisites must be available.
+
+EXECUTION SUMMARY:
+   ✓ Followed the provided steps by choosing a standard-library WSGI entry
+     strategy, wiring HTTP form actions into the existing workspace controller,
+     and serving one browser-loadable HTML page
+   ✓ Added `src/web_entrypoint.py` with an app factory, local server main
+     function, request parsing helpers, and a configurable generation adapter
+     seam via `COPY_FORMAT_GENERATION_CALLABLE`
+   ✓ Reused `ReviewWorkspaceController`, `orchestrate_generation_requests()`,
+     `EndpointWordGenerationApi`, and `AnkiConnectGateway` instead of
+     duplicating generation or submission business logic
+   ✓ Updated `src/review_workspace.py` HTML fields with form names so the HTTP
+     layer can round-trip multiple inputs, reviewed phrase edits, deck choice,
+     and selection state through the existing workspace flow
+   ✓ Added concise local launch documentation in `README.md`, including optional
+     environment variables and local prerequisites
+   ✓ Wrote 6 web-entry tests covering HTML route rendering, adapter seam wiring,
+     unchanged submission forwarding, and real-boundary generate-to-submit
+     integration; completed and archived the full TDD cycle in
+     `completed-tdd-archives/tdd-20260314-221504`
+
+FILES MODIFIED:
+   - src/web_entrypoint.py (created web app factory, local server entrypoint,
+     environment-configured adapter loader, and HTTP action handlers)
+   - src/review_workspace.py (modified form field names for inputs, phrases, and
+     deck selection to support browser submissions)
+   - tests/test_web_entrypoint.py (created, 6 tests)
+   - README.md (created run instructions and prerequisites)
+   - docs/scenario/web_entry_html_route.md (created scenario doc)
+   - docs/scenario/web_app_factory_adapter.md (created scenario doc)
+   - docs/scenario/web_submission_roundtrip.md (created scenario doc)
+   - completed-tdd-archives/tdd-20260314-221504/step-1.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-221504/step-2.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-221504/step-3.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-221504/step-4.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-221504/step-5.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-221504/step-6.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-221504/step-7.md (archived TDD summary)
+   - PROGRESS.txt (appended task completion record)
+
+KEY DECISIONS & NOTES:
+   - Used the Python standard library `wsgiref.simple_server` to keep the entry
+     layer lightweight and runnable without adding dependencies.
+   - Preserved the existing server-rendered architecture by wrapping the current
+     workspace HTML inside one `<form>` and mapping form fields back into the
+     existing controller methods.
+   - Added a safe default behavior for deck loading so the page still starts and
+     is reachable even when local AnkiConnect is not running; real submission
+     still requires the local Anki service.
+   - Chose an environment-based callable loader using `<file-path>:<callable>`
+     because it creates a clear adapter seam without hard-coding any external
+     generation API details into the workspace logic.
+
+ISSUES:
+   - Manual browser verification with a real local generation adapter and real
+     AnkiConnect remains appropriate for a human, but automated tests and local
+     curl verification confirmed the documented server entrypoint behavior.
+
+ACCEPTANCE CRITERIA VERIFICATION:
+   ✓ Criterion 1: Expose a runnable local web entrypoint that starts an HTTP
+     server and serves HTML in a browser - VERIFIED by `src/web_entrypoint.py`
+     `main()` / `run_local_server()`, localhost curl verification against
+     `http://127.0.0.1:8031`, and
+     `test_root_route_returns_html_document_with_workspace_root_and_generate_control`
+   ✓ Criterion 2: HTML page supports multiple input blocks, explicit generation,
+     full AI response display, extracted review, inline edits, deck selection,
+     and submission through the existing workspace flow - VERIFIED by the form
+     field wiring in `src/review_workspace.py`, POST handling in
+     `src/web_entrypoint.py`, and integration test
+     `test_real_boundaries_complete_generate_to_submit_cycle_on_same_page`
+   ✓ Criterion 3: HTTP layer reuses existing Python orchestration and Anki
+     gateway modules instead of duplicating business logic - VERIFIED by
+     `create_workspace_controller()` composing `EndpointWordGenerationApi`,
+     `orchestrate_generation_requests()`, `ReviewWorkspaceController`, and
+     `AnkiConnectGateway`
+   ✓ Criterion 4: Generation API connection is configurable through a clear
+     adapter or environment seam - VERIFIED by
+     `COPY_FORMAT_GENERATION_CALLABLE`, `load_generation_endpoint()`, and
+     `test_load_generation_endpoint_returns_environment_configured_callable_unchanged`
+   ✓ Criterion 5: Include concise run instructions and local prerequisites -
+     VERIFIED by `README.md` launch steps, environment variable examples, and
+     prerequisite list for `uv`, Python, AnkiConnect, and optional local
+     generation adapter
+
+TESTING RESULTS:
+   ✓ Red phase: `uv run python -m unittest tests/test_web_entrypoint.py` failed
+     first with missing `src.web_entrypoint` module as expected
+   ✓ Task tests: `uv run python -m unittest tests/test_web_entrypoint.py` -> 6/6
+     passing
+   ✓ Targeted workspace tests:
+     `uv run python -m unittest tests/test_web_entrypoint.py tests/test_review_workspace_multi_input_generation.py tests/test_review_workspace_grouped_results.py tests/test_review_workspace_inline_edits.py tests/test_review_workspace_deck_submission.py tests/test_review_workspace_composed_flow.py`
+     -> 21/21 passing
+   ✓ Regression tests: `uv run python -m unittest discover -s tests` -> 43/43
+     passing
+   ✓ Local run verification: confirmed `uv run python -m src.web_entrypoint`
+     served HTML at `http://127.0.0.1:8031` and returned the workspace page via
+     local `curl`
+
+================================================================================
+
+================================================================================
+
+TASK ID: task-005
+TASK NAME: Compose End-To-End Phrase Card Flow
+STATUS: complete
+TIMESTAMP: 2026-03-14T13:47:07Z
+================================================================================
+OBJECTIVE (Acceptance Criteria):
+   The composed flow must let the user enter multiple words, generate phrase
+   groups, review edits, choose a deck, and submit selected phrase pairs
+   without leaving the page. The flow must display submitted, skipped, and
+   failed outcomes in a way the user can distinguish per request. The flow must
+   preserve editable results when one group fails so the user can retry without
+   regenerating unaffected groups. The flow should make duplicate skips visible
+   before or during submission feedback.
+
+EXECUTION SUMMARY:
+   ✓ Followed the provided steps by connecting the review workspace submit flow
+     to per-group Anki submission, adding visible submission feedback buckets,
+     and preserving edited groups through partial failures
+   ✓ Extended `ReviewWorkspaceState` in `src/review_workspace.py` with phrase
+     selection state and per-group submission outcomes so generation, review,
+     deck choice, and submission stay on one page
+   ✓ Updated `submit_selected_pairs()` to submit each reviewed group
+     independently, preserve unaffected edited groups on failure, and keep retry
+     state without regeneration
+   ✓ Added rendered feedback buckets for submitted, skipped, and failed results,
+     including skipped duplicate phrase text visibility in the page HTML
+   ✓ Extended `SubmissionResult` in `src/anki_submission_gateway.py` to carry
+     submitted/skipped/failed phrase details alongside counts for UI feedback
+   ✓ Wrote 6 composed-flow tests covering outcome bucket rendering, partial
+     failure preservation, selected-only submission, duplicate-skip feedback,
+     real workspace plus real gateway integration, and edited-text forwarding
+   ✓ Completed a full TDD cycle and archived the TDD summary in
+     `completed-tdd-archives/tdd-20260314-214700`
+
+FILES MODIFIED:
+   - src/review_workspace.py (modified workspace state, per-group submission,
+     selection handling, and feedback rendering)
+   - src/anki_submission_gateway.py (modified submission result details for UI
+     feedback and pair-level outcome tracking)
+   - tests/test_review_workspace_composed_flow.py (created, 6 tests)
+   - docs/scenario/composed_phrase_card_submission_feedback.md (created scenario
+     doc)
+   - docs/scenario/composed_phrase_card_partial_failure_preservation.md
+     (created scenario doc)
+   - completed-tdd-archives/tdd-20260314-214700/step-1.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-214700/step-2.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-214700/step-3.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-214700/step-4.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-214700/step-5.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-214700/step-6.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-214700/step-7.md (archived TDD summary)
+   - PROGRESS.txt (appended task completion record)
+
+KEY DECISIONS & NOTES:
+   - Interpreted "selected phrase pairs" conservatively by adding per-phrase
+     inclusion state, defaulting newly generated extracted pairs to selected.
+   - Chose per-group submission instead of one combined request so the page can
+     distinguish outcomes per request and preserve unaffected reviewed groups
+     when one request fails.
+   - Exposed duplicate skips during submission feedback by rendering skipped
+     counts and skipped phrase fronts in a dedicated skipped bucket.
+   - Kept the implementation inside the existing server-rendered Python
+     workspace architecture rather than introducing a separate frontend stack.
+
+ISSUES:
+   - Manual E2E AnkiConnect verification remains for a human with a reachable
+     local Anki instance; automated integration tests cover the real workspace,
+     orchestrator, and gateway contracts safely without outbound network calls.
+
+ACCEPTANCE CRITERIA VERIFICATION:
+   ✓ Criterion 1: Let the user enter multiple words, generate phrase groups,
+     review edits, choose a deck, and submit selected phrase pairs without
+     leaving the page - VERIFIED by existing multi-input/generation/deck state in
+     `ReviewWorkspaceController`, new `selected_pairs_by_group`, checkbox
+     rendering in `_render_phrase_box()`, and
+     `test_submits_only_phrase_pairs_selected_by_the_user`
+   ✓ Criterion 2: Display submitted, skipped, and failed outcomes so the user
+     can distinguish them per request - VERIFIED by `GroupSubmissionOutcome`,
+     `_render_submission_feedback()`, `_render_outcome_bucket()`, and
+     `test_formats_submitted_skipped_and_failed_counts_in_distinct_buckets`
+   ✓ Criterion 3: Preserve editable results when one group fails so the user can
+     retry without regenerating unaffected groups - VERIFIED by per-group logic
+     in `submit_selected_pairs()` and
+     `test_preserves_reviewed_phrase_edits_when_one_group_submission_fails`
+   ✓ Criterion 4: Make duplicate skips visible before or during submission
+     feedback - VERIFIED by gateway duplicate tracking in `SubmissionResult`,
+     skipped bucket rendering, and
+     `test_duplicate_skip_is_visible_in_submission_feedback`
+
+TESTING RESULTS:
+   ✓ Red phase: `uv run python -m unittest tests/test_review_workspace_composed_flow.py`
+     failed first with missing composed submission helpers and state as expected
+   ✓ Task tests: `uv run python -m unittest tests/test_review_workspace_composed_flow.py`
+     -> 6/6 passing
+   ✓ Regression tests: `uv run python -m unittest discover -s tests` -> 37/37
+     passing
+
+================================================================================
+
+TASK ID: task-004
+TASK NAME: Build Multi-Input Review Workspace
+STATUS: complete
+TIMESTAMP: 2026-03-14T13:35:15Z
+================================================================================
+OBJECTIVE (Acceptance Criteria):
+   The workspace must allow multiple input blocks on one page so the user can
+   prepare several words before generation. The generate action must run only
+   after an explicit user click. The UI must render one grouped result card per
+   input word and must show the full AI response for reading inside that group.
+   The UI must also render a dedicated review area that contains only extracted
+   copy-format phrase pairs available for submission. The extracted review area
+   must show a dynamic number of phrase boxes inside each group. Each phrase
+   box should resize to fit its content without truncating normal phrase
+   lengths. The user must be able to edit extracted English phrases and Chinese
+   meanings before submission. The user must be able to select a target Anki
+   deck before starting submission.
+
+EXECUTION SUMMARY:
+   ✓ Followed the provided steps by implementing a stateful review workspace
+     controller with multiple input blocks, explicit generation, grouped result
+     rendering, extracted review sections, inline edit support, and deck
+     selection before submission
+   ✓ Added server-rendered HTML workspace output in `src/review_workspace.py`
+     that shows one grouped result card per input word, preserves the full AI
+     response, and renders dynamic editable phrase boxes with resize-friendly
+     textarea attributes
+   ✓ Connected the workspace to the real orchestrator and real Anki submission
+     gateway boundaries through injectable actions so integration tests verify
+     grouped generation output and unchanged deck forwarding
+   ✓ Wrote 9 tests covering multi-input rendering, explicit generation gating,
+     full-response review, dynamic phrase-box counts, inline edit isolation,
+     real orchestrator integration, and unchanged deck submission behavior
+   ✓ Executed the full Python test suite after implementation and refactor
+
+FILES MODIFIED:
+   - src/review_workspace.py (created review workspace controller and HTML renderer)
+   - tests/test_review_workspace_multi_input_generation.py (created, 2 tests)
+   - tests/test_review_workspace_grouped_results.py (created, 3 tests)
+   - tests/test_review_workspace_inline_edits.py (created, 2 tests)
+   - tests/test_review_workspace_deck_submission.py (created, 2 tests)
+   - docs/scenario/review_workspace_multi_input_generation.md (created scenario doc)
+   - docs/scenario/review_workspace_grouped_results.md (created scenario doc)
+   - docs/scenario/review_workspace_inline_edits.md (created scenario doc)
+   - docs/scenario/review_workspace_deck_submission.md (created scenario doc)
+   - completed-tdd-archives/tdd-20260314-213506/step-1.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-213506/step-2.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-213506/step-3.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-213506/step-4.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-213506/step-5.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-213506/step-6.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-213506/step-7.md (archived TDD summary)
+   - PROGRESS.txt (appended task completion record)
+
+KEY DECISIONS & NOTES:
+   - Implemented the personal web interface as a Python workspace controller
+     plus server-rendered HTML instead of introducing a separate browser
+     framework, which keeps the feature aligned with the current Python-only
+     project structure.
+   - Used immutable dataclass state updates so inline phrase edits affect only
+     the targeted extracted item and preserve sibling items unchanged.
+   - Filtered blank input blocks before generation so explicit generate clicks
+     submit only real words to the orchestrator.
+
+ISSUES:
+   (none)
+
+ACCEPTANCE CRITERIA VERIFICATION:
+   ✓ Criterion 1: Allow multiple input blocks on one page - VERIFIED by
+     `ReviewWorkspaceController` state initialization, `add_input_block()`, and
+     `test_renders_grouped_cards_for_two_generated_input_words`
+   ✓ Criterion 2: Generate only after explicit user click - VERIFIED by
+     `generate_results()` as the only generation entry point and by
+     `test_does_not_call_generation_action_during_input_activity`
+   ✓ Criterion 3: Render one grouped result card per input word with full AI
+     response - VERIFIED by `render_html()`, `_render_result_group()`, and tests
+     `test_renders_grouped_cards_for_two_generated_input_words`,
+     `test_renders_full_response_and_four_editable_phrase_boxes`, and
+     `test_generate_click_uses_real_orchestrator_output_for_grouped_cards`
+   ✓ Criterion 4: Render a dedicated review area containing only extracted
+     copy-format phrase pairs - VERIFIED by `_render_extracted_review_area()` and
+     tests `test_renders_full_response_and_four_editable_phrase_boxes` plus
+     `test_renders_empty_extracted_review_area_when_no_pairs_exist`
+   ✓ Criterion 5: Show a dynamic number of phrase boxes inside each group -
+     VERIFIED by per-group iteration over `extracted_phrases` and the phrase-box
+     count assertions in `test_renders_full_response_and_four_editable_phrase_boxes`
+     and `test_generate_click_uses_real_orchestrator_output_for_grouped_cards`
+   ✓ Criterion 6: Phrase boxes resize to fit content without truncating normal
+     lengths - VERIFIED by `_measure_rows()` plus resize-friendly textarea style
+     attributes, and by `test_sizes_phrase_boxes_to_fit_normal_phrase_lengths_without_truncation`
+   ✓ Criterion 7: Allow editing extracted English phrases and Chinese meanings
+     before submission - VERIFIED by `edit_phrase()` and tests
+     `test_updates_only_the_edited_english_phrase_item` and
+     `test_updates_only_the_edited_chinese_meaning_item`
+   ✓ Criterion 8: Allow selecting a target Anki deck before submission -
+     VERIFIED by `select_deck()`, deck rendering in `render_html()`, and
+     `test_passes_selected_deck_value_unchanged_into_submission_request`
+
+TESTING RESULTS:
+   ✓ Red phase: `uv run python -m unittest tests/test_review_workspace_multi_input_generation.py tests/test_review_workspace_grouped_results.py tests/test_review_workspace_inline_edits.py tests/test_review_workspace_deck_submission.py`
+     failed first with missing `src.review_workspace` import as expected
+   ✓ Task tests: `uv run python -m unittest tests/test_review_workspace_multi_input_generation.py tests/test_review_workspace_grouped_results.py tests/test_review_workspace_inline_edits.py tests/test_review_workspace_deck_submission.py`
+     -> 9/9 passing
+   ✓ Regression tests: `uv run python -m unittest discover -s tests` -> 31/31
+     passing
+
+================================================================================
+
+TASK ID: task-003
+TASK NAME: Add AnkiConnect Submission Gateway
+STATUS: complete
+TIMESTAMP: 2026-03-14T13:24:31Z
+================================================================================
+OBJECTIVE (Acceptance Criteria):
+   The gateway must read deck names from the user's local Anki instance through
+   AnkiConnect. The gateway must require the user to choose a target deck before
+   note creation. The gateway must use Anki's Basic note type with Front mapped
+   to the English phrase and Back mapped to the Chinese meaning. The gateway
+   must skip phrase pairs whose English front value already exists in Anki and
+   must report submitted, skipped, and failed counts separately.
+
+EXECUTION SUMMARY:
+   ✓ Followed the provided steps by implementing deck retrieval, duplicate-front
+     lookup, Basic-note payload creation, and submission result aggregation
+   ✓ Added `AnkiConnectHttpClient` and `AnkiConnectGateway` with dependency
+     injection so tests can use a safe mock transport while production can call
+     the local AnkiConnect instance
+   ✓ Added helper functions for duplicate planning, explicit deck validation,
+     Anki query construction, and Basic note payload building
+   ✓ Wrote 11 tests covering deck listing, duplicate planning, Basic note field
+     mapping, required deck selection, submission counts, and transport-level
+     request envelopes
+   ✓ Executed the full Python test suite after implementation and refactor
+
+FILES MODIFIED:
+   - src/anki_submission_gateway.py (created AnkiConnect gateway layer)
+   - tests/test_anki_submission_gateway.py (created, 11 tests)
+   - docs/scenario/anki_gateway_deck_selection.md (created scenario doc)
+   - docs/scenario/anki_gateway_duplicate_planning.md (created scenario doc)
+   - docs/scenario/anki_gateway_basic_note_submission.md (created scenario doc)
+   - completed-tdd-archives/tdd-20260314-212431/step-1.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-212431/step-2.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-212431/step-3.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-212431/step-4.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-212431/step-5.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-212431/step-6.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-212431/step-7.md (archived TDD summary)
+   - PROGRESS.txt (appended task completion record)
+
+KEY DECISIONS & NOTES:
+   - Used AnkiConnect actions `deckNames`, `findNotes`, and `addNotes` with the
+     version-6 request envelope expected by local AnkiConnect.
+   - Enforced explicit deck selection through `MissingDeckSelectionError`
+     instead of silently defaulting to any deck.
+   - Treated `addNotes` results of `None` as per-note failures so submitted,
+     skipped, and failed counts remain distinct.
+
+ISSUES:
+   (none)
+
+ACCEPTANCE CRITERIA VERIFICATION:
+   ✓ Criterion 1: Read deck names from the local Anki instance through
+     AnkiConnect - VERIFIED by `AnkiConnectHttpClient.invoke()` building the
+     local `http://127.0.0.1:8765` request envelope and by
+     `AnkiConnectGateway.list_deck_names()` plus tests
+     `test_returns_selectable_deck_list_without_altering_names` and
+     `test_builds_ankiconnect_request_envelope_for_deck_names`
+   ✓ Criterion 2: Require explicit target deck selection before note creation -
+     VERIFIED by `_require_deck_name()` and
+     `test_requires_explicit_deck_selection_before_note_creation`
+   ✓ Criterion 3: Use Basic notes with Front=English and Back=Chinese - VERIFIED
+     by `build_basic_notes()` and tests
+     `test_builds_basic_notes_with_front_and_back_fields` plus
+     `test_uses_real_extracted_phrase_shape_to_build_valid_note_payloads`
+   ✓ Criterion 4: Skip phrase pairs whose English Front already exists in Anki -
+     VERIFIED by `lookup_existing_fronts()`, `plan_phrase_submission()`, and
+     tests `test_marks_duplicate_front_as_skipped_before_note_creation` plus
+     `test_skips_existing_front_instead_of_attempting_add`
+   ✓ Criterion 5: Report submitted, skipped, and failed counts separately -
+     VERIFIED by `SubmissionResult` and
+     `test_reports_submitted_skipped_and_failed_counts_separately`
+
+TESTING RESULTS:
+   ✓ Red phase: `uv run python -m unittest tests/test_anki_submission_gateway.py`
+     failed first with missing module import as expected
+   ✓ Task tests: `uv run python -m unittest tests/test_anki_submission_gateway.py`
+     -> 11/11 passing
+   ✓ Regression tests: `uv run python -m unittest discover -s tests` -> 22/22
+     passing
+
+================================================================================
+TASK ID: task-002
+TASK NAME: Add AI Generation And Extraction Orchestrator
+STATUS: complete
+TIMESTAMP: 2026-03-14T13:16:04Z
+================================================================================
+OBJECTIVE (Acceptance Criteria):
+   The orchestrator must accept multiple input words from one page action. The
+   orchestrator must return one result group per input word in the original
+   input order. Each result group must preserve the full AI response for reading
+   and must also expose the extracted copy-format phrase pairs from Define
+   Copy-Format Extraction Contract. The orchestrator should report generation
+   failures per input word without blocking successful groups. Words that
+   contain no valid copy-format phrase pairs must remain reviewable while
+   exposing no Anki submission items.
+
+EXECUTION SUMMARY:
+   ✓ Followed the provided steps by implementing one per-word generation call,
+     full-response preservation, shared-contract extraction, and isolated
+     per-word failure handling
+   ✓ Created orchestrator result models and an injectable API adapter in
+     `src/ai_generation_orchestrator.py`
+   ✓ Added 6 tests covering order preservation, malformed payload isolation,
+     dynamic phrase counts, explanation-text preservation, real extraction-layer
+     integration, and endpoint-level per-word failure handling
+   ✓ Executed the full Python test suite after implementation and refactor
+
+FILES MODIFIED:
+   - src/ai_generation_orchestrator.py (created orchestrator service layer)
+   - tests/test_ai_generation_orchestrator.py (created, 6 tests)
+   - docs/scenario/ai_generation_and_extraction_orchestrator.md (created scenario doc)
+   - completed-tdd-archives/tdd-20260314-211600/step-1.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-211600/step-2.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-211600/step-3.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-211600/step-4.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-211600/step-5.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-211600/step-6.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-211600/step-7.md (archived TDD summary)
+   - PROGRESS.txt (appended task completion record)
+
+KEY DECISIONS & NOTES:
+   - Used dependency injection through a `WordGenerationApi` protocol so the
+     orchestrator can work with both mock services and a concrete endpoint
+     adapter.
+   - Treated malformed non-string generation payloads as per-word failures with
+     a retry-oriented actionable message.
+   - Preserved successful responses with zero extracted pairs as reviewable
+     groups instead of converting them into failures.
+
+ISSUES:
+   (none)
+
+ACCEPTANCE CRITERIA VERIFICATION:
+   ✓ Criterion 1: Accept multiple input words from one page action - VERIFIED by
+     `orchestrate_generation_requests()` accepting a word list and by
+     `test_returns_grouped_results_in_original_input_order`
+   ✓ Criterion 2: Return one result group per input word in original order -
+     VERIFIED by sequential orchestration output and the order assertion in
+     `test_returns_grouped_results_in_original_input_order`
+   ✓ Criterion 3: Preserve full AI response and extracted copy-format pairs -
+     VERIFIED by `OrchestratedResultGroup.full_ai_response`, real-contract
+     extraction in `_build_success()`, and tests
+     `test_preserves_full_explanation_text_while_exposing_only_copy_format_pair`
+     plus `test_uses_real_extraction_contract_without_manual_reshaping`
+   ✓ Criterion 4: Report generation failures per input word without blocking
+     successes - VERIFIED by `_build_failure()` and tests
+     `test_marks_malformed_group_as_failed_without_blocking_other_words` and
+     `test_endpoint_adapter_reports_only_failed_word_when_request_raises`
+   ✓ Criterion 5: Keep zero-pair words reviewable with no Anki items - VERIFIED
+     by successful groups retaining `full_ai_response` with an empty
+     `extracted_phrases` list in
+     `test_preserves_dynamic_copy_format_counts_exactly`
+
+TESTING RESULTS:
+   ✓ Red phase: `uv run python -m unittest tests/test_ai_generation_orchestrator.py`
+     failed first with missing module import as expected
+   ✓ Task tests: `uv run python -m unittest tests/test_ai_generation_orchestrator.py`
+     -> 6/6 passing
+   ✓ Regression tests: `uv run python -m unittest discover -s tests` -> 11/11 passing
+
+================================================================================
+TASK ID: task-001
+TASK NAME: Define Copy-Format Extraction Contract
+STATUS: complete
+TIMESTAMP: 2026-03-14T13:09:30Z
+================================================================================
+OBJECTIVE (Acceptance Criteria):
+   The contract must represent one input word with a dynamic list of extracted
+   copy-format phrase pairs. Each extracted phrase pair must contain one English
+   front value and one Chinese back value sourced from the copy-format segment
+   only. Words without valid copy-format pairs must produce an empty result set
+   without placeholder cards. The parser must ignore non-copy-format explanation
+   text when building Anki submission items. The dedupe key must use the English
+   front value exactly as stored for Anki submission.
+
+EXECUTION SUMMARY:
+   ✓ Defined immutable request, phrase-pair, and extraction-result dataclasses
+   ✓ Implemented copy-format parsing for `(复制专用: $front$ $back$)` segments only
+   ✓ Rejected malformed segments with missing trimmed front/back content
+   ✓ Added front-value dedupe-key helper using the normalized stored Anki front
+   ✓ Wrote and ran 5 unit tests covering valid extraction, invalid segments,
+     explanation-only responses, mixed content, and whitespace dedupe behavior
+   ✓ Followed the requested steps in order and documented the TDD artifacts
+
+FILES MODIFIED:
+   - .gitignore (created and updated ignore rules for Python cache files)
+   - pyproject.toml (created project metadata and test configuration)
+   - src/__init__.py (created package marker)
+   - src/copy_format_contract.py (created extraction contract and parser)
+   - tests/test_copy_format_contract.py (created, 5 unit tests)
+   - docs/scenario/copy_format_extraction_contract.md (created scenario doc)
+   - completed-tdd-archives/tdd-20260314-210930/step-1.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-210930/step-2.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-210930/step-3.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-210930/step-4.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-210930/step-5.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-210930/step-6.md (archived TDD summary)
+   - completed-tdd-archives/tdd-20260314-210930/step-7.md (archived TDD summary)
+   - PROGRESS.txt (created task completion record)
+
+KEY DECISIONS & NOTES:
+   - Interpreted the copy-format marker conservatively as the exact pattern
+     `(复制专用: $English front$ $Chinese back$)` from the prompt document.
+   - Trimmed surrounding whitespace before storing front/back values so the
+     stored Anki front matches the dedupe key used for submission.
+   - Kept extraction output grouped by a single input word as required by the
+     normalized contract.
+
+ISSUES:
+   (none)
+
+ACCEPTANCE CRITERIA VERIFICATION:
+   ✓ Criterion 1: One input word with a dynamic phrase-pair list - VERIFIED by
+     `ExtractionRequest` and `ExtractionResult` in `src/copy_format_contract.py`
+   ✓ Criterion 2: Each phrase pair contains one English front and one Chinese
+     back from copy-format segments only - VERIFIED by regex-based extraction and
+     `ExtractedPhrasePair(front, back)` plus tests for valid/mixed content
+   ✓ Criterion 3: Missing valid pairs produce an empty result set with no
+     placeholder cards - VERIFIED by filtering invalid segments and the empty-list
+     assertion in `test_returns_empty_phrase_list_when_no_valid_copy_format_segments_exist`
+   ✓ Criterion 4: Non-copy-format explanation text is ignored for Anki submission
+     items - VERIFIED by `test_ignores_explanation_text_and_keeps_only_copy_format_pair`
+   ✓ Criterion 5: Dedupe key uses the English front value exactly as stored for
+     Anki submission - VERIFIED by `make_front_dedupe_key()` and the whitespace
+     normalization assertion in `test_dedupe_key_normalizes_surrounding_whitespace_only`
+
+TESTING RESULTS:
+   ✓ Red phase: `uv run python -m unittest tests/test_copy_format_contract.py`
+     failed first with missing implementation import as expected
+   ✓ Unit tests: `uv run python -m unittest discover -s tests` -> 5/5 passing
+
+================================================================================
