@@ -17,6 +17,14 @@
 - 再读 [`docs/README.zh-CN.md`](docs/README.zh-CN.md) 和 [`docs/scenario/README.zh-CN.md`](docs/scenario/README.zh-CN.md)，了解实现上下文。
 - 尽量沿着现有结构改，不要在没有充分理由的情况下额外引入一层框架式抽象。
 
+## 本地环境说明
+
+- 在这个仓库里跑 `uv` 相关命令之前，先确认已经安装了 Python 3.12+。
+- 如果机器上没有 `uv`，按 [`README.zh-CN.md`](README.zh-CN.md#按操作系统安装-python-和-uv) 里的分系统步骤安装。
+- 如果刚装完 `uv` 还是提示 `command not found`，先重新加载 shell 配置，或者直接新开一个终端窗口。
+- 如果 `uv` 能运行但识别不到 Python，先确认 Python 安装正常，再执行 `uv python list`。
+- 如果后续有人反馈环境安装问题，记得把 [`README.zh-CN.md`](README.zh-CN.md#faq) 里的排错说明一起同步维护。
+
 ## 实现约定
 
 - 面向用户的 UI 文案优先保持中文，除非该区域本来就是英文语境。

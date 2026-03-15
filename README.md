@@ -51,6 +51,8 @@ http://127.0.0.1:8031
 
 If you only need the most important setup locations, jump to [`Where To Change URL And API Key`](#where-to-change-url-and-api-key).
 
+If `uv` does not work on your machine yet, read [`Install Python And uv By OS`](#install-python-and-uv-by-os) first.
+
 ## Quick View
 
 - Multi-word input blocks for batch generation
@@ -178,6 +180,113 @@ If you just want the shortest path to a working local setup:
 7. If you want Anki submission, open Anki with AnkiConnect enabled.
 8. Start the site with `uv run python -m src.web_entrypoint`.
 
+### Install Python And uv By OS
+
+If `uv sync` or `uv run` fails immediately, the usual reason is that Python or `uv` was never installed correctly, or the shell has not reloaded after installation.
+
+#### Windows
+
+1. Install Python 3.12+ from `https://www.python.org/downloads/windows/`.
+2. During installation, enable `Add python.exe to PATH`.
+3. Open PowerShell and install `uv`:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+4. Close PowerShell and open it again.
+5. Confirm installation:
+
+```powershell
+python --version
+uv --version
+```
+
+If `python` is still missing, try `py --version`.
+
+#### macOS
+
+1. Install Python 3.12+ from `https://www.python.org/downloads/macos/`, or install it with Homebrew.
+2. Install `uv`:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. Reload your shell:
+
+```bash
+source ~/.zshrc
+```
+
+4. Confirm installation:
+
+```bash
+python3 --version
+uv --version
+```
+
+If you use a shell other than `zsh`, reload the matching shell config file instead.
+
+#### Ubuntu Or Debian
+
+1. Install Python and common setup tools:
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip curl
+```
+
+2. Install `uv`:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. Reload your shell:
+
+```bash
+source ~/.bashrc
+```
+
+4. Confirm installation:
+
+```bash
+python3 --version
+uv --version
+```
+
+#### Fedora
+
+1. Install Python and curl:
+
+```bash
+sudo dnf install -y python3 python3-pip curl
+```
+
+2. Install `uv`:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. Reload your shell and confirm:
+
+```bash
+source ~/.bashrc
+python3 --version
+uv --version
+```
+
+### If uv Still Does Not Work
+
+- Open a new terminal window and run `uv --version` again.
+- If the shell says `uv: command not found`, the install succeeded but `PATH` was not reloaded.
+- On macOS or Linux, try `source ~/.zshrc` or `source ~/.bashrc`, then re-run `uv --version`.
+- On Windows, fully close PowerShell or CMD and open a new one.
+- If Python is missing, install Python first and then repeat the `uv` installation.
+- If `uv sync` fails inside the repo, run `uv python list` to confirm that `uv` can see Python.
+
 Example install commands:
 
 ```bash
@@ -300,6 +409,12 @@ uv run python -m py_compile "src/web_entrypoint.py" "src/review_workspace.py"
 
 ## FAQ
 
+- Why does the `uv` command not work?
+  - Make sure both Python and `uv` are installed first.
+  - Use the OS-specific steps in [`Install Python And uv By OS`](#install-python-and-uv-by-os).
+  - After installing `uv`, open a new terminal or reload your shell config.
+  - Check `uv --version` before running `uv sync`.
+  - If `uv` exists but cannot find Python, install Python 3.12+ and run `uv python list`.
 - Why is generation not working?
   - Check whether `key` exists or `GEMINI_API_KEY` is set.
   - Check whether `英语二的备考prompt.txt` is still in the project root.

@@ -17,6 +17,14 @@ This repository is mainly a personal tool, but clear contribution rules still ma
 - Read [`docs/README.md`](docs/README.md) and [`docs/scenario/README.md`](docs/scenario/README.md) for implementation context.
 - Follow the current architecture instead of introducing a separate framework layer without a strong reason.
 
+## Local Setup Notes
+
+- Make sure Python 3.12+ is installed before trying to run `uv` commands for this repo.
+- If `uv` is missing, install it with the OS-specific steps in [`README.md`](README.md#install-python-and-uv-by-os).
+- If `uv` was just installed but the shell still says `command not found`, reload the shell config or open a new terminal window.
+- If `uv` runs but cannot find Python, verify Python first and then run `uv python list`.
+- If contributors report setup trouble, keep the troubleshooting notes in [`README.md`](README.md#faq) aligned with the actual onboarding flow.
+
 ## Implementation Expectations
 
 - Keep UI text user-facing in Chinese unless the surrounding area is already English.

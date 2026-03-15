@@ -51,6 +51,8 @@ http://127.0.0.1:8031
 
 如果你只想先看最重要的配置入口，可以直接跳到 [`去哪里改 URL 和 API Key`](#去哪里改-url-和-api-key)。
 
+如果你机器上的 `uv` 还跑不起来，先看 [`按操作系统安装 Python 和 uv`](#按操作系统安装-python-和-uv)。
+
 ## 快速了解
 
 - 支持多个输入块，适合批量生成
@@ -178,6 +180,113 @@ bring
 7. 如果你要提交到 Anki，先打开安装了 AnkiConnect 的 Anki。
 8. 运行 `uv run python -m src.web_entrypoint` 启动页面。
 
+### 按操作系统安装 Python 和 uv
+
+如果 `uv sync` 或 `uv run` 一上来就失败，最常见的原因不是项目本身有问题，而是 Python 或 `uv` 没装好，或者安装完以后终端还没有重新加载环境变量。
+
+#### Windows
+
+1. 从 `https://www.python.org/downloads/windows/` 安装 Python 3.12+。
+2. 安装时勾选 `Add python.exe to PATH`。
+3. 打开 PowerShell，安装 `uv`：
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+4. 关闭 PowerShell，再重新打开。
+5. 确认安装结果：
+
+```powershell
+python --version
+uv --version
+```
+
+如果 `python` 还是找不到，再试一下 `py --version`。
+
+#### macOS
+
+1. 从 `https://www.python.org/downloads/macos/` 安装 Python 3.12+，或者用 Homebrew 安装。
+2. 安装 `uv`：
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. 重新加载 shell：
+
+```bash
+source ~/.zshrc
+```
+
+4. 确认安装结果：
+
+```bash
+python3 --version
+uv --version
+```
+
+如果你用的不是 `zsh`，那就改成重新加载你自己的 shell 配置文件。
+
+#### Ubuntu 或 Debian
+
+1. 安装 Python 和常用依赖：
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip curl
+```
+
+2. 安装 `uv`：
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. 重新加载 shell：
+
+```bash
+source ~/.bashrc
+```
+
+4. 确认安装结果：
+
+```bash
+python3 --version
+uv --version
+```
+
+#### Fedora
+
+1. 安装 Python 和 curl：
+
+```bash
+sudo dnf install -y python3 python3-pip curl
+```
+
+2. 安装 `uv`：
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. 重新加载 shell 并确认：
+
+```bash
+source ~/.bashrc
+python3 --version
+uv --version
+```
+
+### 如果 uv 还是不能用
+
+- 新开一个终端窗口，再执行一次 `uv --version`。
+- 如果提示 `uv: command not found`，通常说明已经装了，但 `PATH` 还没重新加载。
+- 在 macOS 或 Linux 上，可以试试 `source ~/.zshrc` 或 `source ~/.bashrc`，然后再执行 `uv --version`。
+- 在 Windows 上，把 PowerShell 或 CMD 全部关掉后重新打开。
+- 如果 Python 本身就没有安装成功，先装好 Python，再重新安装一次 `uv`。
+- 如果是在仓库里执行 `uv sync` 失败，可以先跑 `uv python list`，确认 `uv` 能不能识别到 Python。
+
 安装示例命令：
 
 ```bash
@@ -300,6 +409,12 @@ uv run python -m py_compile "src/web_entrypoint.py" "src/review_workspace.py"
 
 ## FAQ
 
+- 为什么 `uv` 命令跑不起来？
+  - 先确认 Python 和 `uv` 都已经装好。
+  - 按 [`按操作系统安装 Python 和 uv`](#按操作系统安装-python-和-uv) 里的步骤来装。
+  - 安装完 `uv` 之后，重新开一个终端，或者重新加载 shell 配置。
+  - 在执行 `uv sync` 之前，先确认 `uv --version` 能正常输出。
+  - 如果 `uv` 已经存在，但找不到 Python，请先安装 Python 3.12+，再执行 `uv python list`。
 - 为什么生成不工作？
   - 先检查 `key` 是否存在，或者 `GEMINI_API_KEY` 是否已设置。
   - 再检查 `英语二的备考prompt.txt` 是否还在项目根目录。
