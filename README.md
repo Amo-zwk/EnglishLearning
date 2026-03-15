@@ -30,6 +30,27 @@ Personal English phrase card workspace with Gemini generation, manual review, an
 - English contribution guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Chinese contribution guide: [`CONTRIBUTING.zh-CN.md`](CONTRIBUTING.zh-CN.md)
 
+## 3-Minute Quick Start
+
+1. Install `Python 3.12+` and `uv`.
+2. Clone the repo and run `uv sync`.
+3. Put your Gemini key in `key`, or set `GEMINI_API_KEY`.
+4. Keep `英语二的备考prompt.txt` in the project root.
+5. If you want Anki submission, open Anki with AnkiConnect enabled.
+6. Start the app:
+
+```bash
+uv run python -m src.web_entrypoint
+```
+
+7. Open:
+
+```text
+http://127.0.0.1:8031
+```
+
+If you only need the most important setup locations, jump to [`Where To Change URL And API Key`](#where-to-change-url-and-api-key).
+
 ## Quick View
 
 - Multi-word input blocks for batch generation
