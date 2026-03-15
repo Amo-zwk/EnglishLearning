@@ -173,12 +173,75 @@ bring
 
 1. 安装 Python 3.12 或更高版本。
 2. 安装 `uv`。
-3. 克隆这个仓库。
+3. 安装 Git，或者直接下载源码 ZIP 压缩包。
 4. 在项目根目录运行 `uv sync`。
 5. 把 Gemini key 放进本地 `key` 文件，或者设置 `GEMINI_API_KEY`。
 6. 确保 `英语二的备考prompt.txt` 保留在项目根目录。
 7. 如果你要提交到 Anki，先打开安装了 AnkiConnect 的 Anki。
 8. 运行 `uv run python -m src.web_entrypoint` 启动页面。
+
+### 安装 Git 或直接下载源码
+
+很多人不是不会运行项目，而是机器上根本没安装 Git，所以 `git clone` 这一步就已经卡住了。如果你正好是这种情况，可以先安装 Git；如果暂时不想装，也可以直接从 GitHub 下载 ZIP 压缩包，再解压到本地。
+
+#### Windows
+
+- 从 `https://git-scm.com/download/win` 安装 Git。
+- 安装后重新打开 PowerShell，执行：
+
+```powershell
+git --version
+```
+
+- 如果你暂时不想装 Git，也可以直接下载这个 ZIP 再解压：
+  - `https://github.com/Amo-zwk/EnglishLearning/archive/refs/heads/main.zip`
+
+#### macOS
+
+- 在 Terminal 里执行 `git --version`，按系统提示完成安装，或者通过 Homebrew 安装。
+- 安装后确认：
+
+```bash
+git --version
+```
+
+- 如果你暂时不想装 Git，也可以直接下载这个 ZIP 再解压：
+  - `https://github.com/Amo-zwk/EnglishLearning/archive/refs/heads/main.zip`
+
+#### Ubuntu 或 Debian
+
+- 安装 Git：
+
+```bash
+sudo apt update
+sudo apt install -y git
+```
+
+- 安装后确认：
+
+```bash
+git --version
+```
+
+- 如果你暂时不想装 Git，也可以直接下载仓库 ZIP：
+  - `https://github.com/Amo-zwk/EnglishLearning/archive/refs/heads/main.zip`
+
+#### Fedora
+
+- 安装 Git：
+
+```bash
+sudo dnf install -y git
+```
+
+- 安装后确认：
+
+```bash
+git --version
+```
+
+- 如果你暂时不想装 Git，也可以直接下载仓库 ZIP：
+  - `https://github.com/Amo-zwk/EnglishLearning/archive/refs/heads/main.zip`
 
 ### 按操作系统安装 Python 和 uv
 
@@ -287,7 +350,38 @@ uv --version
 - 如果 Python 本身就没有安装成功，先装好 Python，再重新安装一次 `uv`。
 - 如果是在仓库里执行 `uv sync` 失败，可以先跑 `uv python list`，确认 `uv` 能不能识别到 Python。
 
-安装示例命令：
+### 按操作系统给出的安装示例命令
+
+请直接照着和你终端一致的那一组命令执行。如果机器上还没有 Git，就跳过 `git clone`，先下载 ZIP 并解压，再进入解压后的 `EnglishLearning-main` 目录。
+
+#### Windows PowerShell
+
+如果已经安装 Git：
+
+```powershell
+git clone git@github.com:Amo-zwk/EnglishLearning.git
+cd EnglishLearning
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+如果没有 Git，解压 ZIP 后执行：
+
+```powershell
+cd EnglishLearning-main
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+如果 PowerShell 里 `python` 不可用，但 `py` 可以用，就改成：
+
+```powershell
+uv run py -m src.web_entrypoint
+```
+
+#### macOS Terminal
+
+如果已经安装 Git：
 
 ```bash
 git clone git@github.com:Amo-zwk/EnglishLearning.git
@@ -296,33 +390,183 @@ uv sync
 uv run python -m src.web_entrypoint
 ```
 
-如果还没有安装 `uv`，可以先执行：
+如果没有 Git，解压 ZIP 后执行：
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+cd EnglishLearning-main
+uv sync
+uv run python -m src.web_entrypoint
 ```
 
-完成后，在浏览器打开 `http://127.0.0.1:8031`。
+如果你机器上的 Python 命令是 `python3`，就改成：
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+#### Ubuntu 或 Debian 终端
+
+如果已经安装 Git：
+
+```bash
+git clone git@github.com:Amo-zwk/EnglishLearning.git
+cd EnglishLearning
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+如果没有 Git，解压 ZIP 后执行：
+
+```bash
+cd EnglishLearning-main
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+如果系统里只有 `python3`，就改成：
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+#### Fedora 终端
+
+如果已经安装 Git：
+
+```bash
+git clone git@github.com:Amo-zwk/EnglishLearning.git
+cd EnglishLearning
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+如果没有 Git，解压 ZIP 后执行：
+
+```bash
+cd EnglishLearning-main
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+如果系统里只有 `python3`，就改成：
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+启动成功后，在浏览器打开 `http://127.0.0.1:8031`。
 
 ## 本地运行
 
-1. 安装依赖：
+### Windows PowerShell
+
+1. 在项目根目录打开 PowerShell。
+2. 安装依赖：
+
+```powershell
+uv sync
+```
+
+3. 启动本地站点：
+
+```powershell
+uv run python -m src.web_entrypoint
+```
+
+如果 `python` 不可用但 `py` 可用，就执行：
+
+```powershell
+uv run py -m src.web_entrypoint
+```
+
+4. 打开页面：
+
+```text
+http://127.0.0.1:8031
+```
+
+### macOS Terminal
+
+1. 在项目根目录打开 Terminal。
+2. 安装依赖：
 
 ```bash
 uv sync
 ```
 
-2. 启动本地站点：
+3. 启动本地站点：
 
 ```bash
 uv run python -m src.web_entrypoint
 ```
 
-3. 打开页面：
+如果你的机器使用 `python3`，就执行：
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+4. 打开页面：
 
 ```text
 http://127.0.0.1:8031
 ```
+
+### Ubuntu 或 Debian 终端
+
+1. 在项目根目录打开终端。
+2. 安装依赖：
+
+```bash
+uv sync
+```
+
+3. 启动本地站点：
+
+```bash
+uv run python -m src.web_entrypoint
+```
+
+如果系统里只有 `python3`，就执行：
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+4. 打开页面：
+
+```text
+http://127.0.0.1:8031
+```
+
+### Fedora 终端
+
+1. 在项目根目录打开终端。
+2. 安装依赖：
+
+```bash
+uv sync
+```
+
+3. 启动本地站点：
+
+```bash
+uv run python -m src.web_entrypoint
+```
+
+如果系统里只有 `python3`，就执行：
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+4. 打开页面：
+
+```text
+http://127.0.0.1:8031
+```
+
+如果页面打不开，再检查你是否通过 `COPY_FORMAT_WEB_PORT` 改过端口。
 
 ## 去哪里改 URL 和 API Key
 

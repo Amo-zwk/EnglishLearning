@@ -173,12 +173,75 @@ If you just want the shortest path to a working local setup:
 
 1. Install Python 3.12 or newer.
 2. Install `uv`.
-3. Clone this repository.
+3. Install Git, or download the source code as a ZIP file.
 4. Run `uv sync` in the project root.
 5. Put your Gemini key into the local `key` file, or set `GEMINI_API_KEY`.
 6. Make sure `英语二的备考prompt.txt` stays in the project root.
 7. If you want Anki submission, open Anki with AnkiConnect enabled.
 8. Start the site with `uv run python -m src.web_entrypoint`.
+
+### Install Git Or Download The Source Code
+
+Some users cannot run `git clone` simply because Git is not installed yet. If that is your case, either install Git first or download the repository ZIP from GitHub and extract it locally.
+
+#### Windows
+
+- Install Git from `https://git-scm.com/download/win`.
+- After installation, open a new PowerShell window and check:
+
+```powershell
+git --version
+```
+
+- If you do not want to install Git yet, download this ZIP instead and extract it:
+  - `https://github.com/Amo-zwk/EnglishLearning/archive/refs/heads/main.zip`
+
+#### macOS
+
+- Install Git by running `git --version` in Terminal and accepting the system prompt, or install it with Homebrew.
+- Confirm installation:
+
+```bash
+git --version
+```
+
+- If you do not want to install Git yet, download this ZIP instead and extract it:
+  - `https://github.com/Amo-zwk/EnglishLearning/archive/refs/heads/main.zip`
+
+#### Ubuntu Or Debian
+
+- Install Git:
+
+```bash
+sudo apt update
+sudo apt install -y git
+```
+
+- Confirm installation:
+
+```bash
+git --version
+```
+
+- If you do not want to install Git yet, download the repository ZIP from:
+  - `https://github.com/Amo-zwk/EnglishLearning/archive/refs/heads/main.zip`
+
+#### Fedora
+
+- Install Git:
+
+```bash
+sudo dnf install -y git
+```
+
+- Confirm installation:
+
+```bash
+git --version
+```
+
+- If you do not want to install Git yet, download the repository ZIP from:
+  - `https://github.com/Amo-zwk/EnglishLearning/archive/refs/heads/main.zip`
 
 ### Install Python And uv By OS
 
@@ -287,7 +350,38 @@ uv --version
 - If Python is missing, install Python first and then repeat the `uv` installation.
 - If `uv sync` fails inside the repo, run `uv python list` to confirm that `uv` can see Python.
 
-Example install commands:
+### Example Install Commands By OS
+
+Use the example that matches your terminal. If Git is not installed yet, skip the `git clone` step and extract the ZIP file first, then open the extracted `EnglishLearning-main` folder in your terminal.
+
+#### Windows PowerShell
+
+With Git installed:
+
+```powershell
+git clone git@github.com:Amo-zwk/EnglishLearning.git
+cd EnglishLearning
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+Without Git, after extracting the ZIP:
+
+```powershell
+cd EnglishLearning-main
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+If `python` is not available in PowerShell but `py` is, use:
+
+```powershell
+uv run py -m src.web_entrypoint
+```
+
+#### macOS Terminal
+
+With Git installed:
 
 ```bash
 git clone git@github.com:Amo-zwk/EnglishLearning.git
@@ -296,33 +390,183 @@ uv sync
 uv run python -m src.web_entrypoint
 ```
 
-If `uv` is not installed yet, install it first:
+Without Git, after extracting the ZIP:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+cd EnglishLearning-main
+uv sync
+uv run python -m src.web_entrypoint
 ```
 
-After that, open `http://127.0.0.1:8031` in your browser.
+If your machine exposes Python as `python3`, use:
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+#### Ubuntu Or Debian Terminal
+
+With Git installed:
+
+```bash
+git clone git@github.com:Amo-zwk/EnglishLearning.git
+cd EnglishLearning
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+Without Git, after extracting the ZIP:
+
+```bash
+cd EnglishLearning-main
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+If the system only exposes `python3`, use:
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+#### Fedora Terminal
+
+With Git installed:
+
+```bash
+git clone git@github.com:Amo-zwk/EnglishLearning.git
+cd EnglishLearning
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+Without Git, after extracting the ZIP:
+
+```bash
+cd EnglishLearning-main
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+If the system only exposes `python3`, use:
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+After startup, open `http://127.0.0.1:8031` in your browser.
 
 ## Run Locally
 
-1. Install dependencies:
+### Windows PowerShell
+
+1. Open PowerShell in the project root.
+2. Install dependencies:
+
+```powershell
+uv sync
+```
+
+3. Start the local site:
+
+```powershell
+uv run python -m src.web_entrypoint
+```
+
+If `python` is unavailable but `py` works, use:
+
+```powershell
+uv run py -m src.web_entrypoint
+```
+
+4. Open the local page:
+
+```text
+http://127.0.0.1:8031
+```
+
+### macOS Terminal
+
+1. Open Terminal in the project root.
+2. Install dependencies:
 
 ```bash
 uv sync
 ```
 
-2. Start the local site:
+3. Start the local site:
 
 ```bash
 uv run python -m src.web_entrypoint
 ```
 
-3. Open the local page:
+If your machine uses `python3`, run:
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+4. Open the local page:
 
 ```text
 http://127.0.0.1:8031
 ```
+
+### Ubuntu Or Debian Terminal
+
+1. Open a terminal in the project root.
+2. Install dependencies:
+
+```bash
+uv sync
+```
+
+3. Start the local site:
+
+```bash
+uv run python -m src.web_entrypoint
+```
+
+If your system only exposes `python3`, run:
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+4. Open the local page:
+
+```text
+http://127.0.0.1:8031
+```
+
+### Fedora Terminal
+
+1. Open a terminal in the project root.
+2. Install dependencies:
+
+```bash
+uv sync
+```
+
+3. Start the local site:
+
+```bash
+uv run python -m src.web_entrypoint
+```
+
+If your system only exposes `python3`, run:
+
+```bash
+uv run python3 -m src.web_entrypoint
+```
+
+4. Open the local page:
+
+```text
+http://127.0.0.1:8031
+```
+
+If the page does not open, check whether you changed the port through `COPY_FORMAT_WEB_PORT`.
 
 ## Where To Change URL And API Key
 
