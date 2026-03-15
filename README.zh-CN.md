@@ -164,6 +164,29 @@ uv run python -m src.web_entrypoint
 http://127.0.0.1:8031
 ```
 
+## 去哪里改 URL 和 API Key
+
+如果你是在别的地方接这个项目，这几处通常最容易找半天：
+
+- Gemini API key 来源：
+  - 默认本地文件：`key`
+  - 环境变量覆盖：`GEMINI_API_KEY`
+  - 其他 key 文件路径：`COPY_FORMAT_GEMINI_KEY_FILE`
+- Gemini 请求 URL：
+  - 定义位置：`src/gemini_generation_adapter.py:12`
+  - 默认接口模板：`https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
+- Prompt 文件路径：
+  - 默认文件：`英语二的备考prompt.txt`
+  - 改路径时可用：`COPY_FORMAT_PROMPT_FILE`
+- 本地网页 URL：
+  - 默认地址：`http://127.0.0.1:8031`
+  - 端口覆盖：`COPY_FORMAT_WEB_PORT`
+- AnkiConnect URL：
+  - 定义位置：`src/anki_submission_gateway.py:11`
+  - 默认地址：`http://127.0.0.1:8765`
+
+大多数情况下，你真正需要改的只是 `key`、`GEMINI_API_KEY` 或 `COPY_FORMAT_WEB_PORT`。
+
 ## 可选配置
 
 - `COPY_FORMAT_WEB_PORT`: 覆盖本地 HTTP 端口

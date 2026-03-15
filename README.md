@@ -164,6 +164,29 @@ uv run python -m src.web_entrypoint
 http://127.0.0.1:8031
 ```
 
+## Where To Change URL And API Key
+
+If you are trying to adapt this project in another place, these are the settings people usually spend too long trying to find:
+
+- Gemini API key source:
+  - default local file: `key`
+  - environment override: `GEMINI_API_KEY`
+  - alternate key file path: `COPY_FORMAT_GEMINI_KEY_FILE`
+- Gemini request URL:
+  - defined in `src/gemini_generation_adapter.py:12`
+  - default endpoint template: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
+- Prompt file path:
+  - default file: `英语二的备考prompt.txt`
+  - relocation override: `COPY_FORMAT_PROMPT_FILE`
+- Local web page URL:
+  - default address: `http://127.0.0.1:8031`
+  - port override: `COPY_FORMAT_WEB_PORT`
+- AnkiConnect URL:
+  - defined in `src/anki_submission_gateway.py:11`
+  - default address: `http://127.0.0.1:8765`
+
+Most users only need to touch `key`, `GEMINI_API_KEY`, or `COPY_FORMAT_WEB_PORT`.
+
 ## Optional Configuration
 
 - `COPY_FORMAT_WEB_PORT`: override the local HTTP port
