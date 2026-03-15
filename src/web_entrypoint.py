@@ -297,8 +297,8 @@ def render_page(workspace_html: str) -> str:
         .copy-export-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }}
         .copy-export-header h2 {{ margin: 0; }}
         .deck-selection-area label, .input-block span, .phrase-box label {{ font-size: 14px; color: #5c4f43; font-weight: 700; }}
-        textarea, select, button {{ font: inherit; }}
-        textarea, select {{
+        textarea, select, input, button {{ font: inherit; }}
+        textarea, select, input[type="search"] {{
             width: 100%;
             padding: 12px 14px;
             border-radius: var(--radius-md);
@@ -307,8 +307,21 @@ def render_page(workspace_html: str) -> str:
             color: var(--page-ink);
             transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
         }}
-        textarea:focus, select:focus {{ outline: none; border-color: rgba(201, 111, 59, 0.7); box-shadow: 0 0 0 4px rgba(201, 111, 59, 0.14); }}
+        textarea:focus, select:focus, input[type="search"]:focus {{ outline: none; border-color: rgba(201, 111, 59, 0.7); box-shadow: 0 0 0 4px rgba(201, 111, 59, 0.14); }}
         .action-bar {{ display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }}
+        .generation-pending-banner {{
+            display: none;
+            margin: 0 0 20px;
+            padding: 16px 18px;
+            border-radius: 22px;
+            border: 1px solid rgba(86, 130, 165, 0.18);
+            background: linear-gradient(135deg, rgba(231, 241, 248, 0.96) 0%, rgba(245, 249, 252, 0.94) 100%);
+            color: #23496b;
+            box-shadow: 0 10px 24px rgba(61, 102, 129, 0.1);
+        }}
+        .generation-pending-banner.is-visible {{ display: grid; gap: 6px; }}
+        .generation-pending-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.78; }}
+        .generation-pending-text {{ margin: 0; font-size: 16px; line-height: 1.6; font-weight: 700; }}
         button {{
             border: 0;
             border-radius: 999px;
@@ -346,8 +359,15 @@ def render_page(workspace_html: str) -> str:
         .copy-export-panels {{ display: grid; }}
         .copy-export-text {{ display: none; }}
         .copy-export-text.is-active {{ display: block; }}
+        .deck-selection-area {{ display: grid; gap: 12px; }}
+        .deck-selection-header {{ display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 320px); gap: 12px; align-items: end; }}
+        .deck-selection-header label {{ display: inline-flex; align-items: center; min-height: 46px; }}
+        .deck-search-input {{ background: rgba(255, 252, 247, 0.98); }}
+        .deck-selection-feedback {{ min-height: 20px; margin: 0; font-size: 14px; color: var(--muted); }}
         .submission-preview-area {{ display: grid; gap: 10px; padding: 14px 16px; border-radius: var(--radius-lg); background: rgba(255, 252, 244, 0.78); border: 1px solid rgba(145, 112, 76, 0.12); }}
+        .submission-preview-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }}
         .submission-preview-header h3 {{ margin: 0; font-size: 18px; color: #5b4129; }}
+        .submission-preview-submit-button {{ white-space: nowrap; }}
         .submission-preview-help {{ margin: 0; color: var(--muted); font-size: 14px; }}
         .phrase-select-toggle, .phrase-lock-toggle {{ display: inline-flex; align-items: center; gap: 8px; width: fit-content; padding: 7px 12px; border-radius: 999px; background: rgba(255, 249, 238, 0.92); border: 1px solid rgba(145, 112, 76, 0.12); color: #6b5745; }}
         .phrase-select-input, .phrase-lock-input {{ width: 16px; height: 16px; accent-color: var(--accent-deep); }}
@@ -415,6 +435,7 @@ def render_page(workspace_html: str) -> str:
             .page-hero {{ padding: 22px 18px; border-radius: 24px; }}
             .review-overview {{ position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }}
             .deck-selection-area, .copy-export-area, .grouped-result-card {{ padding: 16px; border-radius: 20px; }}
+            .deck-selection-header {{ grid-template-columns: 1fr; }}
             .action-bar {{ display: grid; }}
             button {{ width: 100%; justify-content: center; }}
         }}
@@ -427,7 +448,7 @@ def render_page(workspace_html: str) -> str:
             <h1>英语词组制卡工作台</h1>
             <p class=\"page-intro\">输入一个或多个单词，生成完整解析，核对复制专用提取结果，再把真正有价值的词组送进你的 Anki Deck。</p>
         </section>
-        <form method=\"post\">{workspace_html}<div class=\"action-bar\"><button type=\"submit\" name=\"action\" value=\"add-input\" class=\"secondary-action\">新增输入框</button><button type=\"submit\" name=\"action\" value=\"generate\">开始生成</button><button type=\"submit\" name=\"action\" value=\"submit\">提交选中词组</button></div></form>
+        <form method=\"post\"><div class=\"generation-pending-banner\" data-generation-pending-banner aria-live=\"polite\"><p class=\"generation-pending-label\">生成中</p><p class=\"generation-pending-text\">正在等待 AI 返回结果，请稍候，页面会在完成后自动刷新。</p></div>{workspace_html}<div class=\"action-bar\"><button type=\"submit\" name=\"action\" value=\"add-input\" class=\"secondary-action\">新增输入框</button><button type=\"submit\" name=\"action\" value=\"generate\">开始生成</button><button type=\"submit\" name=\"action\" value=\"submit\">提交选中词组</button></div></form>
     </main>
     <script>
         var EXPORT_OPTION_STORAGE_KEY = "copy-format-export-options";
@@ -636,6 +657,98 @@ def render_page(workspace_html: str) -> str:
             }}
         }}
 
+        function filterDeckOptions(searchInput, select, feedback) {{
+            var query = searchInput.value.trim().toLocaleLowerCase();
+            var currentValue = select.value;
+            var originalOptions = select.__originalDeckOptions || [];
+            var matchingCount = 0;
+            select.innerHTML = "";
+
+            originalOptions.forEach(function(optionData) {{
+                var matches = !query || optionData.label.toLocaleLowerCase().indexOf(query) !== -1;
+                var shouldKeep = matches || optionData.value === currentValue;
+                if (!shouldKeep) {{
+                    return;
+                }}
+                if (matches) {{
+                    matchingCount += 1;
+                }}
+                var option = document.createElement("option");
+                option.value = optionData.value;
+                option.textContent = optionData.label;
+                if (optionData.value === currentValue) {{
+                    option.selected = true;
+                }}
+                select.appendChild(option);
+            }});
+
+            if (!select.options.length && originalOptions.length) {{
+                originalOptions.forEach(function(optionData) {{
+                    var option = document.createElement("option");
+                    option.value = optionData.value;
+                    option.textContent = optionData.label;
+                    select.appendChild(option);
+                }});
+                select.value = currentValue;
+            }}
+
+            if (!(feedback instanceof HTMLElement)) {{
+                return;
+            }}
+            if (!query) {{
+                feedback.textContent = "";
+            }} else if (matchingCount > 0) {{
+                feedback.textContent = "已筛出 " + matchingCount + " 个 deck";
+            }} else if (currentValue) {{
+                feedback.textContent = "没有匹配的 deck，已保留当前选中项。";
+            }} else {{
+                feedback.textContent = "没有匹配的 deck";
+            }}
+        }}
+
+        function initDeckSearch() {{
+            var searchInput = document.querySelector("[data-deck-search]");
+            var select = document.querySelector("[data-deck-selection]");
+            var feedback = document.querySelector("[data-deck-feedback]");
+            if (!(searchInput instanceof HTMLInputElement) || !(select instanceof HTMLSelectElement)) {{
+                return;
+            }}
+            select.__originalDeckOptions = Array.prototype.map.call(select.options, function(option) {{
+                return {{ value: option.value, label: option.textContent || option.value }};
+            }});
+            searchInput.addEventListener("input", function() {{
+                filterDeckOptions(searchInput, select, feedback);
+            }});
+            select.addEventListener("change", function() {{
+                filterDeckOptions(searchInput, select, feedback);
+            }});
+            filterDeckOptions(searchInput, select, feedback);
+        }}
+
+        function initGenerationPendingState() {{
+            var form = document.querySelector("form");
+            if (!(form instanceof HTMLFormElement)) {{
+                return;
+            }}
+            form.addEventListener("submit", function(event) {{
+                var submitEvent = event;
+                var submitter = submitEvent.submitter;
+                if (!(submitter instanceof HTMLButtonElement) || submitter.value !== "generate") {{
+                    return;
+                }}
+                var banner = form.querySelector("[data-generation-pending-banner]");
+                if (banner instanceof HTMLElement) {{
+                    banner.classList.add("is-visible");
+                }}
+                form.querySelectorAll('button[name="action"][value="generate"]').forEach(function(button) {{
+                    if (button instanceof HTMLButtonElement) {{
+                        button.disabled = true;
+                        button.textContent = "生成中...";
+                    }}
+                }});
+            }});
+        }}
+
         function activateExportFormat(button) {{
             var format = button.getAttribute("data-export-format");
             if (!format) {{
@@ -741,6 +854,8 @@ def render_page(workspace_html: str) -> str:
         if (initialExportContainer instanceof HTMLElement) {{
             restoreExportOptions(initialExportContainer);
         }}
+        initDeckSearch();
+        initGenerationPendingState();
         refreshCopyExportArea();
     </script>
 </body>

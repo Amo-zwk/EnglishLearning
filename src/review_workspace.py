@@ -214,8 +214,12 @@ class ReviewWorkspaceController:
             f"{review_overview_html}"
             f"{copy_export_html}"
             '<section class="deck-selection-area">'
+            '<div class="deck-selection-header">'
             '<label for="deck-selection">目标 Deck</label>'
-            f'<select id="deck-selection" name="selected_deck" class="deck-selection">{deck_options_html}</select>'
+            '<input id="deck-search" type="search" class="deck-search-input" placeholder="搜索 deck" data-deck-search autocomplete="off">'
+            "</div>"
+            f'<select id="deck-selection" name="selected_deck" class="deck-selection" data-deck-selection>{deck_options_html}</select>'
+            '<p class="deck-selection-feedback" data-deck-feedback aria-live="polite"></p>'
             "</section>"
             '<section class="grouped-results">'
             f"{result_cards_html}"
@@ -310,7 +314,7 @@ class ReviewWorkspaceController:
             f"{self._render_group_generation_timing(result_group)}"
             "</div>"
             f"{generation_failure}"
-            '<details class="full-response-panel" open>'
+            '<details class="full-response-panel">'
             '<summary class="full-response-toggle">完整 AI 响应</summary>'
             f'<div class="full-ai-response">{full_response}</div>'
             "</details>"
@@ -447,6 +451,7 @@ class ReviewWorkspaceController:
             '<section class="submission-preview-area">'
             '<div class="submission-preview-header">'
             "<h3>最终提交预览</h3>"
+            '<button type="submit" name="action" value="submit" class="submission-preview-submit-button">提交选中词组</button>'
             "</div>"
             '<p class="submission-preview-help">这里展示按当前勾选、去空白和去重规则后，真正会提交到 Anki 的词组集合。</p>'
             f'<div id="submission-preview-cards" class="submission-preview-cards">{submission_preview}</div>'

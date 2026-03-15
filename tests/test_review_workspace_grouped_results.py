@@ -225,8 +225,35 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
             html,
         )
         self.assertIn('id="submission-preview-cards"', html)
+        self.assertIn('class="submission-preview-submit-button"', html)
+        self.assertIn('id="deck-search"', html)
+        self.assertIn("data-deck-selection", html)
+        self.assertIn("data-deck-feedback", html)
         self.assertIn('class="submission-preview-card-front">in power</p>', html)
         self.assertIn('class="submission-preview-card-back">当权</p>', html)
+
+    def test_full_ai_response_is_collapsed_by_default(self) -> None:
+        workspace = ReviewWorkspaceController(
+            generation_action=lambda input_words: [
+                OrchestratedResultGroup(
+                    input_word="deliver",
+                    full_ai_response="Full AI response for deliver.",
+                    extracted_phrases=[
+                        ExtractedPhrasePair(front="deliver a speech", back="发表演讲")
+                    ],
+                )
+            ],
+            list_decks_action=lambda: ["Default"],
+            submit_action=no_op_submit_action,
+        )
+
+        workspace.update_input_block(0, "deliver")
+        workspace.generate_results()
+
+        html = workspace.render_html()
+
+        self.assertIn('<details class="full-response-panel">', html)
+        self.assertNotIn('<details class="full-response-panel" open>', html)
 
     def test_copy_export_area_only_includes_selected_phrase_pairs(self) -> None:
         workspace = ReviewWorkspaceController(
