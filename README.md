@@ -1,15 +1,70 @@
-# Copy-format review workspace
+# EnglishLearning
 
-## Run the local HTML site
+一个给个人使用的英语词组制卡工作台：输入一个或多个单词，调用 Gemini 生成完整解析，提取可复制词组，人工筛选后提交到 Anki。
 
-1. Make sure the project dependencies are available with `uv sync`.
-2. Start the local site with `uv run python -m src.web_entrypoint`.
-3. Open `http://127.0.0.1:8031` in your browser.
+## What It Does
 
-## Optional configuration
+- Generate full AI explanations for one or more input words
+- Extract phrase pairs from the special copy format output
+- Review, edit, select, and lock duplicate Front values before submission
+- Preview the final Anki submission set with card-based UI
+- Submit the final selected phrase pairs to Anki through AnkiConnect
 
-- `COPY_FORMAT_WEB_PORT`: Override the local HTTP port without editing code.
-- `COPY_FORMAT_GENERATION_CALLABLE`: Point the app at a local generation adapter using `<file-path>:<callable-name>`.
+## Current Workflow
+
+1. Enter one or more English words in the local web page
+2. Click the generate button to request AI output
+3. Review the full response and the extracted phrase pairs
+4. Edit Front and Back values when needed
+5. Optionally uncheck low-value pairs or lock a duplicate Front to keep a preferred version
+6. Preview the final submission cards
+7. Select a target deck and submit to Anki
+
+## Tech Stack
+
+- Python 3.12+
+- `uv` for environment and command execution
+- Standard library WSGI server for the local site
+- Gemini REST integration for generation
+- AnkiConnect for deck listing and note submission
+
+## Project Structure
+
+- `src/web_entrypoint.py`: local web entrypoint and browser-side UI script
+- `src/review_workspace.py`: review state, export logic, preview logic, submission flow
+- `src/gemini_generation_adapter.py`: Gemini adapter and local config loading
+- `src/anki_submission_gateway.py`: AnkiConnect integration and duplicate handling
+- `src/ai_generation_orchestrator.py`: multi-input generation orchestration and timing
+- `tests/`: unit and integration-style coverage for the workflow
+
+## Run Locally
+
+1. Install dependencies:
+
+```bash
+uv sync
+```
+
+2. Start the local site:
+
+```bash
+uv run python -m src.web_entrypoint
+```
+
+3. Open the local page:
+
+```text
+http://127.0.0.1:8031
+```
+
+## Optional Configuration
+
+- `COPY_FORMAT_WEB_PORT`: override the local HTTP port
+- `COPY_FORMAT_GENERATION_CALLABLE`: use a custom local generation adapter with `<file-path>:<callable-name>`
+- `GEMINI_API_KEY`: use Gemini key from environment instead of local file
+- `COPY_FORMAT_GEMINI_KEY_FILE`: override the local key file path
+- `COPY_FORMAT_PROMPT_FILE`: override the local prompt file path
+- `COPY_FORMAT_GEMINI_MODEL`: override the Gemini model name, default is `gemini-2.5-pro`
 
 Example:
 
@@ -19,36 +74,40 @@ COPY_FORMAT_GENERATION_CALLABLE=/absolute/path/to/local_generation_adapter.py:ge
 uv run python -m src.web_entrypoint
 ```
 
-The configured callable must accept one input word string and return either a response string or a dict containing a string `content` field.
+## Local Files Kept Out Of Git
 
-## Local prerequisites
+These files are intentionally ignored:
 
-- Python 3.12+
-- `uv`
-- A reachable local AnkiConnect service at `http://127.0.0.1:8765` for deck listing and submission
-- A local generation adapter if you want to replace the built-in demo generation responses
+- `key`
+- `英语二的备考prompt.txt`
 
-Without `COPY_FORMAT_GENERATION_CALLABLE`, the site first tries to build a local Gemini adapter from the project `key` file and `英语二的备考prompt.txt`. If Gemini configuration is unavailable, it falls back to the built-in demo adapter so you can still review the HTML workflow without editing code.
+That keeps personal credentials and local prompt tuning out of version control.
 
-## Use the bundled Gemini adapter
+## Anki Notes
 
-If you keep your Gemini key inside the project `key` file, the site can use it automatically.
+- The project submits notes through AnkiConnect
+- Decks are listed from local Anki
+- Notes use the built-in `Basic` note type
+- `Front` is the English phrase
+- `Back` is the Chinese explanation
+- Duplicate checks are based on `Front`
 
-Recommended safer alternative on Windows PowerShell:
+## Verification
 
-```powershell
-$env:GEMINI_API_KEY="your-new-key"
-uv run python -m src.web_entrypoint
+Run the test suite:
+
+```bash
+uv run python -m unittest discover -s tests
 ```
 
-Optional environment variables:
+Compile-check key modules:
 
-- `GEMINI_API_KEY`: Override the key file and use the Gemini key from the environment.
-- `COPY_FORMAT_GEMINI_KEY_FILE`: Override the local key file path.
-- `COPY_FORMAT_PROMPT_FILE`: Override the prompt file path.
-- `COPY_FORMAT_GEMINI_MODEL`: Override the Gemini model name. Default: `gemini-2.5-pro`.
+```bash
+uv run python -m py_compile "src/web_entrypoint.py" "src/review_workspace.py"
+```
 
-Important:
+## Notes
 
-- If you previously exposed a real Gemini key, rotate it in Google AI Studio or Google Cloud before continued use.
-- The bundled adapter sends your prompt plus the input word to Gemini and returns the raw text response for the website to parse.
+- This repository is designed for personal workflow rather than a public SaaS product
+- If local Gemini configuration is unavailable, the app falls back to the built-in demo generation adapter
+- If you previously exposed a real Gemini key, rotate it before continued use
