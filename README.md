@@ -13,6 +13,10 @@ EnglishLearning is a personal English phrase card workspace. You enter one or mo
 - Duplicate `Front` handling with manual lock priority
 - Local Anki deck selection through AnkiConnect
 
+## Screenshot
+
+![Review workspace screenshot](docs/images/review-workspace.png)
+
 ## What It Does
 
 - Generates full AI explanations for one or more input words
@@ -65,6 +69,9 @@ This layout is meant to preserve context from the AI output while keeping the fi
 ## Roadmap
 
 - GitHub roadmap issue: [#1 Track next workflow improvements](https://github.com/Amo-zwk/EnglishLearning/issues/1)
+- [#2 Improve review layout for larger batches](https://github.com/Amo-zwk/EnglishLearning/issues/2)
+- [#3 Support saving and restoring review sessions](https://github.com/Amo-zwk/EnglishLearning/issues/3)
+- [#4 Add clearer Anki submission feedback](https://github.com/Amo-zwk/EnglishLearning/issues/4)
 - Planned polish includes a README screenshot or GIF once browser capture tooling is available in this environment.
 - Future items stay focused on practical workflow improvements rather than turning the project into a public SaaS product.
 
