@@ -297,3 +297,17 @@ uv run python -m py_compile "src/web_entrypoint.py" "src/review_workspace.py"
 - 仓库自带的 prompt 文件属于产品行为的一部分，不是可替换示例。
 - 如果本地 Gemini 配置不可用，应用会回退到内置的演示生成适配器。
 - 如果你曾经泄露过真实 Gemini key，继续使用前请先轮换。
+
+## FAQ
+
+- 为什么生成不工作？
+  - 先检查 `key` 是否存在，或者 `GEMINI_API_KEY` 是否已设置。
+  - 再检查 `英语二的备考prompt.txt` 是否还在项目根目录。
+  - 再检查本地页面是否运行在 `http://127.0.0.1:8031` 或你自定义的端口。
+- 为什么提交到 Anki 不工作？
+  - 确认 Anki 已经打开。
+  - 确认已经安装 AnkiConnect，且地址仍然是 `http://127.0.0.1:8765`。
+  - 确认提交前已经选择目标 deck。
+- 为什么不能换成别的 prompt？
+  - 这套工作流依赖仓库自带 prompt 产出的复制专用提取契约。
+  - 即使换 prompt 后还能生成文本，也可能直接破坏提取和 `Front` / `Back` 的稳定映射。

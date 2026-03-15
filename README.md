@@ -297,3 +297,17 @@ uv run python -m py_compile "src/web_entrypoint.py" "src/review_workspace.py"
 - The bundled prompt file is part of the product behavior, not an optional example.
 - If local Gemini configuration is unavailable, the app falls back to the built-in demo generation adapter.
 - If you previously exposed a real Gemini key, rotate it before continued use.
+
+## FAQ
+
+- Why is generation not working?
+  - Check whether `key` exists or `GEMINI_API_KEY` is set.
+  - Check whether `英语二的备考prompt.txt` is still in the project root.
+  - Check whether the local page is running at `http://127.0.0.1:8031` or your overridden port.
+- Why is Anki submission not working?
+  - Make sure Anki is open.
+  - Make sure AnkiConnect is installed and reachable at `http://127.0.0.1:8765`.
+  - Make sure you selected a target deck before submission.
+- Why can I not swap in another prompt?
+  - This workflow depends on the copy-only extraction contract produced by the bundled prompt.
+  - Replacing the prompt may still generate text, but it can break extraction and `Front` or `Back` mapping.
