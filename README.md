@@ -144,6 +144,36 @@ This layout is meant to preserve context from the AI output while keeping the fi
 - `src/ai_generation_orchestrator.py`: multi-input generation orchestration and timing
 - `tests/`: unit and integration-style coverage for the workflow
 
+## Installation
+
+If you just want the shortest path to a working local setup:
+
+1. Install Python 3.12 or newer.
+2. Install `uv`.
+3. Clone this repository.
+4. Run `uv sync` in the project root.
+5. Put your Gemini key into the local `key` file, or set `GEMINI_API_KEY`.
+6. Make sure `英语二的备考prompt.txt` stays in the project root.
+7. If you want Anki submission, open Anki with AnkiConnect enabled.
+8. Start the site with `uv run python -m src.web_entrypoint`.
+
+Example install commands:
+
+```bash
+git clone git@github.com:Amo-zwk/EnglishLearning.git
+cd EnglishLearning
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+If `uv` is not installed yet, install it first:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+After that, open `http://127.0.0.1:8031` in your browser.
+
 ## Run Locally
 
 1. Install dependencies:

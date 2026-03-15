@@ -144,6 +144,36 @@ bring
 - `src/ai_generation_orchestrator.py`: 多输入编排与耗时统计
 - `tests/`: 这套流程的单元测试和集成风格测试
 
+## 安装说明
+
+如果你只是想用最短路径把本地环境跑起来，可以按下面做：
+
+1. 安装 Python 3.12 或更高版本。
+2. 安装 `uv`。
+3. 克隆这个仓库。
+4. 在项目根目录运行 `uv sync`。
+5. 把 Gemini key 放进本地 `key` 文件，或者设置 `GEMINI_API_KEY`。
+6. 确保 `英语二的备考prompt.txt` 保留在项目根目录。
+7. 如果你要提交到 Anki，先打开安装了 AnkiConnect 的 Anki。
+8. 运行 `uv run python -m src.web_entrypoint` 启动页面。
+
+安装示例命令：
+
+```bash
+git clone git@github.com:Amo-zwk/EnglishLearning.git
+cd EnglishLearning
+uv sync
+uv run python -m src.web_entrypoint
+```
+
+如果还没有安装 `uv`，可以先执行：
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+完成后，在浏览器打开 `http://127.0.0.1:8031`。
+
 ## 本地运行
 
 1. 安装依赖：
