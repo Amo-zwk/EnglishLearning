@@ -80,6 +80,10 @@ class WorkspaceControllerProtocol(Protocol):
 
     def submit_selected_pairs(self) -> list[object]: ...
 
+    def export_session(self) -> str: ...
+
+    def import_session(self, session_payload: str) -> None: ...
+
     def render_html(self) -> str: ...
 
 
@@ -266,9 +270,26 @@ def render_page(workspace_html: str) -> str:
         .page-intro {{ max-width: 720px; margin: 12px 0 0; font-size: 17px; line-height: 1.7; color: rgba(248, 244, 235, 0.9); }}
         form {{ display: block; }}
         .review-workspace {{ display: grid; gap: 22px; }}
+        .review-overview {{
+            position: sticky;
+            top: 18px;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            padding: 14px;
+            border-radius: var(--radius-xl);
+            background: rgba(255, 250, 241, 0.94);
+            border: 1px solid rgba(145, 112, 76, 0.12);
+            box-shadow: 0 14px 30px rgba(62, 41, 22, 0.08);
+            backdrop-filter: blur(12px);
+        }}
+        .review-overview-metric {{ display: grid; gap: 6px; padding: 12px 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(255, 255, 252, 0.96) 0%, rgba(250, 243, 229, 0.92) 100%); border: 1px solid rgba(145, 112, 76, 0.1); }}
+        .review-overview-label {{ font-size: 13px; color: #6b6f76; font-weight: 700; }}
+        .review-overview-value {{ font-size: clamp(24px, 3vw, 32px); color: #3f2a18; }}
         .input-blocks, .grouped-results {{ display: grid; gap: 18px; }}
         .input-block, .phrase-box {{ display: grid; gap: 8px; }}
-        .deck-selection-area, .copy-export-area, .grouped-result-card {{
+        .deck-selection-area, .copy-export-area, .grouped-result-card, .session-management-area {{
             background: var(--panel);
             border: 1px solid var(--line);
             border-radius: var(--radius-xl);
@@ -332,6 +353,11 @@ def render_page(workspace_html: str) -> str:
         .submission-preview-area {{ display: grid; gap: 10px; padding: 14px 16px; border-radius: var(--radius-lg); background: rgba(255, 252, 244, 0.78); border: 1px solid rgba(145, 112, 76, 0.12); }}
         .submission-preview-header h3 {{ margin: 0; font-size: 18px; color: #5b4129; }}
         .submission-preview-help {{ margin: 0; color: var(--muted); font-size: 14px; }}
+        .session-management-area {{ display: grid; gap: 12px; background: linear-gradient(180deg, rgba(248, 251, 252, 0.96) 0%, rgba(235, 244, 247, 0.92) 100%); }}
+        .session-management-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }}
+        .session-management-header h2 {{ margin: 0; }}
+        .session-management-help, .session-management-feedback {{ margin: 0; color: var(--muted); font-size: 14px; }}
+        .session-payload-text {{ min-height: 180px; font-family: "Courier New", monospace; background: rgba(251, 253, 255, 0.96); }}
         .phrase-select-toggle, .phrase-lock-toggle {{ display: inline-flex; align-items: center; gap: 8px; width: fit-content; padding: 7px 12px; border-radius: 999px; background: rgba(255, 249, 238, 0.92); border: 1px solid rgba(145, 112, 76, 0.12); color: #6b5745; }}
         .phrase-select-input, .phrase-lock-input {{ width: 16px; height: 16px; accent-color: var(--accent-deep); }}
         .submission-preview-cards {{ display: grid; gap: 14px; }}
@@ -361,14 +387,31 @@ def render_page(workspace_html: str) -> str:
         .full-response-toggle::after {{ content: "展开"; float: right; font-size: 13px; color: #52708d; }}
         .full-response-panel[open] .full-response-toggle::after {{ content: "收起"; }}
         .full-ai-response {{ white-space: pre-wrap; background: linear-gradient(180deg, rgba(236, 242, 252, 0.95) 0%, rgba(243, 246, 255, 0.95) 100%); padding: 14px; border-radius: var(--radius-lg); border: 1px solid rgba(105, 132, 188, 0.14); line-height: 1.72; }}
-        .extracted-review-area {{ display: grid; gap: 16px; margin-top: 14px; }}
-        .phrase-box {{ background: rgba(255, 253, 248, 0.92); border: 1px solid rgba(145, 112, 76, 0.12); border-radius: var(--radius-lg); padding: 14px; }}
+        .grouped-results {{ align-items: start; }}
+        .grouped-result-card {{ display: grid; gap: 14px; padding: 22px; }}
+        .extracted-review-area {{ display: grid; gap: 16px; margin-top: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; }}
+        .phrase-box {{ background: rgba(255, 253, 248, 0.92); border: 1px solid rgba(145, 112, 76, 0.12); border-radius: var(--radius-lg); padding: 14px; box-shadow: 0 8px 20px rgba(92, 62, 30, 0.05); }}
         .submission-feedback {{ display: grid; gap: 12px; margin-top: 14px; }}
-        .submission-outcome {{ border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px; background: rgba(248, 251, 252, 0.92); }}
+        .submission-outcome-summary {{ padding: 16px 18px; border-radius: 18px; border: 1px solid rgba(145, 112, 76, 0.12); }}
+        .submission-outcome-summary-submitted {{ background: linear-gradient(135deg, rgba(227, 244, 232, 0.96) 0%, rgba(242, 249, 244, 0.96) 100%); color: #244b2e; }}
+        .submission-outcome-summary-mixed, .submission-outcome-summary-skipped {{ background: linear-gradient(135deg, rgba(251, 241, 214, 0.96) 0%, rgba(255, 248, 230, 0.96) 100%); color: #694d14; }}
+        .submission-outcome-summary-partial, .submission-outcome-summary-failed {{ background: linear-gradient(135deg, rgba(252, 229, 222, 0.96) 0%, rgba(255, 242, 238, 0.96) 100%); color: #702f1f; }}
+        .submission-outcome-summary-label {{ margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }}
+        .submission-outcome-summary-title {{ margin: 6px 0 0; font-size: 22px; }}
+        .submission-outcome-summary-text {{ margin: 8px 0 0; line-height: 1.6; }}
+        .submission-outcome {{ border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px; background: rgba(248, 251, 252, 0.92); display: grid; gap: 10px; }}
+        .submission-outcome-header h3, .submission-outcome-header p {{ margin: 0; }}
+        .submission-outcome-header {{ display: grid; gap: 4px; }}
+        .submission-outcome-list {{ display: grid; gap: 8px; padding-left: 20px; margin: 0; }}
+        .submission-outcome-item {{ display: grid; gap: 2px; }}
+        .submission-outcome-front {{ font-weight: 700; color: #2f2d2b; }}
+        .submission-outcome-back {{ color: #6b6f76; }}
+        .submission-error-message {{ margin: 0; padding: 12px 14px; border-radius: 14px; background: rgba(255, 240, 235, 0.92); border: 1px solid rgba(181, 83, 52, 0.16); color: #7f321c; }}
         @media (max-width: 720px) {{
             main {{ padding: 20px 14px 40px; }}
             .page-hero {{ padding: 22px 18px; border-radius: 24px; }}
-            .deck-selection-area, .copy-export-area, .grouped-result-card {{ padding: 16px; border-radius: 20px; }}
+            .review-overview {{ position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+            .deck-selection-area, .copy-export-area, .grouped-result-card, .session-management-area {{ padding: 16px; border-radius: 20px; }}
             .action-bar {{ display: grid; }}
             button {{ width: 100%; justify-content: center; }}
         }}
@@ -423,6 +466,46 @@ def render_page(workspace_html: str) -> str:
             }}
             if (dedupeInput instanceof HTMLInputElement && typeof options.dedupeFront === "boolean") {{
                 dedupeInput.checked = options.dedupeFront;
+            }}
+        }}
+
+        function saveSessionPayload() {{
+            var payloadField = document.querySelector('[data-session-payload]');
+            var feedback = document.querySelector('[data-session-feedback]');
+            if (!(payloadField instanceof HTMLTextAreaElement)) {{
+                return;
+            }}
+            try {{
+                window.localStorage.setItem("review-workspace-session", payloadField.value);
+                if (feedback instanceof HTMLElement) {{
+                    feedback.textContent = "当前会话已保存到浏览器，可稍后粘贴或直接恢复。";
+                }}
+            }} catch (error) {{
+                if (feedback instanceof HTMLElement) {{
+                    feedback.textContent = "当前浏览器无法写入本地会话，请手动复制下面的会话内容。";
+                }}
+            }}
+        }}
+
+        function restoreSavedSessionHint() {{
+            var payloadField = document.querySelector('[data-session-payload]');
+            var feedback = document.querySelector('[data-session-feedback]');
+            if (!(payloadField instanceof HTMLTextAreaElement)) {{
+                return;
+            }}
+            try {{
+                var saved = window.localStorage.getItem("review-workspace-session");
+                if (!saved) {{
+                    return;
+                }}
+                if (!payloadField.value.trim()) {{
+                    payloadField.value = saved;
+                }}
+                if (feedback instanceof HTMLElement) {{
+                    feedback.textContent = "检测到浏览器中已有已保存会话；需要时可直接点击“恢复会话”。";
+                }}
+            }} catch (error) {{
+                return;
             }}
         }}
 
@@ -653,6 +736,10 @@ def render_page(workspace_html: str) -> str:
             if (!(target instanceof HTMLElement)) {{
                 return;
             }}
+            if (target.matches("[data-session-save]")) {{
+                saveSessionPayload();
+                return;
+            }}
             if (target.matches(".copy-export-format-button")) {{
                 activateExportFormat(target);
                 return;
@@ -696,6 +783,7 @@ def render_page(workspace_html: str) -> str:
             restoreExportOptions(initialExportContainer);
         }}
         refreshCopyExportArea();
+        restoreSavedSessionHint();
     </script>
 </body>
 </html>"""
@@ -740,6 +828,12 @@ def _apply_request_to_workspace(
         workspace.select_deck(form_data.get("selected_deck", ""))
         _sync_phrase_edits(workspace, form_data)
         workspace.submit_selected_pairs()
+        return
+
+    if action == "load-session":
+        session_payload = form_data.get("session_payload", "").strip()
+        if session_payload:
+            workspace.import_session(session_payload)
 
 
 def _sync_input_blocks(

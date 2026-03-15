@@ -22,6 +22,7 @@ class RecordingWorkspaceController:
         self.select_deck_calls: list[str] = []
         self.edit_calls: list[tuple[int, int, str | None, str | None]] = []
         self.lock_calls: list[tuple[int, int, bool]] = []
+        self.import_session_calls: list[str] = []
         self.submit_calls = 0
         self.add_input_calls = 0
         self.generate_calls = 0
@@ -85,6 +86,12 @@ class RecordingWorkspaceController:
         self.submit_calls += 1
         return []
 
+    def export_session(self) -> str:
+        return '{"input_blocks":["deliver"]}'
+
+    def import_session(self, session_payload: str) -> None:
+        self.import_session_calls.append(session_payload)
+
     def render_html(self) -> str:
         self.render_calls += 1
         return (
@@ -92,6 +99,7 @@ class RecordingWorkspaceController:
             '<button type="submit" name="action" value="generate" class="generate-action">开始生成</button>'
             '<label class="input-block" for="input-word-0"><span>输入单词 1</span>'
             '<textarea id="input-word-0" class="input-word-field">deliver</textarea></label>'
+            '<section class="session-management-area"><textarea name="session_payload" data-session-payload>{"input_blocks":["deliver"]}</textarea></section>'
             "</section>"
         )
 
@@ -289,6 +297,11 @@ class WebAppFactoryAdapterTests(unittest.TestCase):
         self.assertIn("copy-format-export-options", body)
         self.assertIn("restoreExportOptions(initialExportContainer)", body)
         self.assertIn("saveExportOptions(exportContainer)", body)
+        self.assertIn('class="review-overview"', body)
+        self.assertIn('class="session-management-area"', body)
+        self.assertIn('name="session_payload"', body)
+        self.assertIn("saveSessionPayload()", body)
+        self.assertIn("restoreSavedSessionHint();", body)
 
     def test_load_generation_endpoint_returns_environment_configured_callable_unchanged(
         self,
@@ -354,6 +367,23 @@ class WebSubmissionRoundtripTests(unittest.TestCase):
         self.assertEqual(status, "200 OK")
         self.assertEqual(controller.lock_calls, [(0, 0, True)])
 
+    def test_load_session_route_forwards_payload_to_workspace(self) -> None:
+        controller = RecordingWorkspaceController()
+        app = create_web_app(lambda: controller)
+
+        status, _headers, _html = call_wsgi_app(
+            app,
+            build_wsgi_environ(
+                method="POST",
+                body=b"action=load-session&session_payload=%7B%22input_blocks%22%3A%5B%22saved%22%5D%7D",
+            ),
+        )
+
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(
+            controller.import_session_calls, ['{"input_blocks":["saved"]}']
+        )
+
     def test_real_boundaries_complete_generate_to_submit_cycle_on_same_page(
         self,
     ) -> None:
@@ -395,7 +425,7 @@ class WebSubmissionRoundtripTests(unittest.TestCase):
         self.assertIn("Full response for deliver.", generated_body)
         self.assertIn("deliver a speech", generated_body)
         self.assertEqual(submit_status, "200 OK")
-        self.assertIn("Submitted: 1", submitted_body)
+        self.assertIn("已加入 Anki: 1", submitted_body)
         self.assertIn("claim a speech", submitted_body)
         add_notes_calls = [call for call in transport.calls if call[0] == "addNotes"]
         self.assertEqual(len(add_notes_calls), 2)
