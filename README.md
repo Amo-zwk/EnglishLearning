@@ -9,6 +9,7 @@ EnglishLearning is a local workspace for generating, reviewing, editing, and sub
 ## GitHub Quick Intro
 
 - Personal tool, not a public SaaS product
+- The bundled prompt file is required for the intended output contract
 - Generate phrase explanations with Gemini from one or more input words
 - Review the full AI output before choosing what actually goes into Anki
 - Edit extracted `Front` and `Back` pairs, handle duplicate `Front` values, and submit only the good cards
@@ -116,6 +117,8 @@ This layout is meant to preserve context from the AI output while keeping the fi
 
 ## Key Rules
 
+- The bundled prompt file `英语二的备考prompt.txt` is a required project file.
+- This workflow is tied to that prompt and does not support replacing it with a different prompt while expecting the same extraction contract.
 - Only content extracted from the copy-only format is used for Anki submission.
 - Low-value phrase pairs should be skipped instead of added.
 - Notes use the built-in `Basic` note type.
@@ -167,7 +170,7 @@ http://127.0.0.1:8031
 - `COPY_FORMAT_GENERATION_CALLABLE`: use a custom local generation adapter with `<file-path>:<callable-name>`
 - `GEMINI_API_KEY`: use a Gemini key from the environment instead of a local file
 - `COPY_FORMAT_GEMINI_KEY_FILE`: override the local key file path
-- `COPY_FORMAT_PROMPT_FILE`: override the local prompt file path
+- `COPY_FORMAT_PROMPT_FILE`: override the prompt file path only if you are relocating the same required project prompt
 - `COPY_FORMAT_GEMINI_MODEL`: override the Gemini model name, default is `gemini-2.5-pro`
 
 Example:
@@ -178,14 +181,21 @@ COPY_FORMAT_GENERATION_CALLABLE=/absolute/path/to/local_generation_adapter.py:ge
 uv run python -m src.web_entrypoint
 ```
 
+## Required Project Files
+
+These files are part of the intended project setup:
+
+- `英语二的备考prompt.txt`
+
+The prompt file is versioned because the generation contract depends on it.
+
 ## Local Files Kept Out Of Git
 
 These files are intentionally ignored:
 
 - `key`
-- `英语二的备考prompt.txt`
 
-This keeps personal credentials and local prompt tuning out of version control.
+This keeps personal credentials out of version control while preserving the required project prompt.
 
 ## Verification
 
@@ -204,5 +214,6 @@ uv run python -m py_compile "src/web_entrypoint.py" "src/review_workspace.py"
 ## Notes
 
 - This repository is designed for a personal workflow rather than a public SaaS product.
+- The bundled prompt file is part of the product behavior, not an optional example.
 - If local Gemini configuration is unavailable, the app falls back to the built-in demo generation adapter.
 - If you previously exposed a real Gemini key, rotate it before continued use.

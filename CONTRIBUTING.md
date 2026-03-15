@@ -8,6 +8,7 @@ This repository is mainly a personal tool, but clear contribution rules still ma
 
 - Keep the project focused on a personal English phrase card workflow.
 - Prefer practical workflow improvements over platform-style expansion.
+- Treat `英语二的备考prompt.txt` as a required product file, not a replaceable sample.
 - Preserve the rule that only copy-only extracted pairs are eligible for Anki submission.
 
 ## Before You Change Anything
@@ -48,5 +49,5 @@ uv run python -m py_compile "src/web_entrypoint.py" "src/review_workspace.py"
 ## Security And Privacy
 
 - Never commit local secrets such as `key`.
-- Keep personal prompt files and local tuning files out of git.
+- Keep the required project prompt in git, but keep personal secrets and unrelated local tuning files out of git.
 - Rotate any exposed credentials before continued use.
