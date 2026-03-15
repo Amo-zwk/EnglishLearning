@@ -322,6 +322,12 @@ def render_page(workspace_html: str) -> str:
         .generation-pending-banner.is-visible {{ display: grid; gap: 6px; }}
         .generation-pending-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.78; }}
         .generation-pending-text {{ margin: 0; font-size: 16px; line-height: 1.6; font-weight: 700; }}
+        .generate-action.is-pending,
+        .action-bar button[value="generate"].is-pending {{
+            opacity: 0.72;
+            pointer-events: none;
+            filter: saturate(0.92);
+        }}
         button {{
             border: 0;
             border-radius: 999px;
@@ -742,7 +748,8 @@ def render_page(workspace_html: str) -> str:
                 }}
                 form.querySelectorAll('button[name="action"][value="generate"]').forEach(function(button) {{
                     if (button instanceof HTMLButtonElement) {{
-                        button.disabled = true;
+                        button.classList.add("is-pending");
+                        button.setAttribute("aria-disabled", "true");
                         button.textContent = "生成中...";
                     }}
                 }});
