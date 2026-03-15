@@ -2,9 +2,9 @@
 
 [English README](README.md)
 
-一个把 Gemini 解析结果人工收口后再提交到 Anki 的个人英语词组制卡工作台。
+一个把 Gemini 生成的英语词组解析人工筛选后再提交到 Anki 的本地工作台。
 
-EnglishLearning 是一个个人使用的英语词组制卡工作台。你可以输入一个或多个英文单词，用 Gemini 生成完整解析，从复制专用格式中提取词组对，人工筛选后再提交到 Anki。
+EnglishLearning 是一个本地制卡工作台，用来生成、审核、编辑并提交真正有价值的词组卡片，同时保留完整 AI 上下文方便人工判断。
 
 ## GitHub 仓库速览
 
