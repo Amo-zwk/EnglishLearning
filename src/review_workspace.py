@@ -438,6 +438,7 @@ class ReviewWorkspaceController:
         result_group: OrchestratedResultGroup,
     ) -> str:
         full_response = escape(result_group.full_ai_response or "")
+        generation_failure = self._render_generation_failure(result_group)
         review_area = self._render_extracted_review_area(group_index, result_group)
         submission_feedback = self._render_submission_feedback(group_index)
         return (
@@ -446,6 +447,7 @@ class ReviewWorkspaceController:
             f"<h2>单词：{escape(result_group.input_word)}</h2>"
             f"{self._render_group_generation_timing(result_group)}"
             "</div>"
+            f"{generation_failure}"
             '<details class="full-response-panel" open>'
             '<summary class="full-response-toggle">完整 AI 响应</summary>'
             f'<div class="full-ai-response">{full_response}</div>'
@@ -461,9 +463,14 @@ class ReviewWorkspaceController:
         result_group: OrchestratedResultGroup,
     ) -> str:
         if not result_group.extracted_phrases:
+            empty_state_message = "没有可提交的提取词组。"
+            if result_group.failure is not None:
+                empty_state_message = (
+                    "这次生成没有产出可提交词组，请先根据上面的失败原因检查配置或重试。"
+                )
             return (
                 '<section class="extracted-review-area">'
-                "<p>没有可提交的提取词组。</p>"
+                f"<p>{empty_state_message}</p>"
                 "</section>"
             )
 
@@ -525,6 +532,20 @@ class ReviewWorkspaceController:
         if duration is None:
             return ""
         return f'<span class="group-generation-timing">{duration:.3f} 秒</span>'
+
+    @staticmethod
+    def _render_generation_failure(result_group: OrchestratedResultGroup) -> str:
+        if result_group.failure is None:
+            return ""
+        status = escape(result_group.failure.status)
+        message = escape(result_group.failure.message)
+        return (
+            '<section class="generation-failure-banner" '
+            f'data-failure-status="{status}" aria-live="polite">'
+            '<p class="generation-failure-label">生成失败</p>'
+            f'<p class="generation-failure-message">{message}</p>'
+            "</section>"
+        )
 
     def _render_copy_export_area(self) -> str:
         plain_text = self._build_copy_export_text()

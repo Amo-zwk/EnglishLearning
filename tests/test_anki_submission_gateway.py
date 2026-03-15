@@ -1,12 +1,18 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from src.copy_format_contract import ExtractedPhrasePair
 from src.anki_submission_gateway import (
+    ANKI_CONNECT_CONFIG_ENV,
+    ANKI_CONNECT_URL_ENV,
     AnkiConnectGateway,
     AnkiConnectHttpClient,
     MissingDeckSelectionError,
     build_basic_notes,
     plan_phrase_submission,
+    resolve_anki_connect_url,
 )
 
 
@@ -204,6 +210,35 @@ class AnkiConnectHttpClientTests(unittest.TestCase):
                 )
             ],
         )
+
+    def test_resolves_anki_connect_url_from_project_config_file(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "AnkiConnect"
+            config_path.write_text(
+                '{"webBindAddress":"127.0.0.1","webBindPort":9001}',
+                encoding="utf-8",
+            )
+
+            with patch.dict(
+                "os.environ",
+                {ANKI_CONNECT_CONFIG_ENV: str(config_path)},
+                clear=False,
+            ):
+                self.assertEqual(
+                    resolve_anki_connect_url(),
+                    "http://127.0.0.1:9001",
+                )
+
+    def test_prefers_explicit_anki_connect_url_environment_override(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                ANKI_CONNECT_URL_ENV: "http://127.0.0.1:9900",
+                ANKI_CONNECT_CONFIG_ENV: "/tmp/ignored-AnkiConnect",
+            },
+            clear=False,
+        ):
+            self.assertEqual(resolve_anki_connect_url(), "http://127.0.0.1:9900")
 
 
 if __name__ == "__main__":

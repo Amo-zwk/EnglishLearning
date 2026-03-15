@@ -303,6 +303,41 @@ class WebAppFactoryAdapterTests(unittest.TestCase):
         self.assertIn("saveSessionPayload()", body)
         self.assertIn("restoreSavedSessionHint();", body)
 
+    def test_app_factory_renders_generation_failure_message(self) -> None:
+        def generation_endpoint(input_word: str) -> dict[str, str]:
+            raise RuntimeError("missing Gemini API key")
+
+        dependencies = WebAppDependencies(
+            generation_callable=generation_endpoint,
+            list_decks_action=lambda: ["Default"],
+            submit_action=lambda deck_name, phrase_pairs: SubmissionResult(
+                submitted_count=len(phrase_pairs),
+                skipped_count=0,
+                failed_count=0,
+                submitted_pairs=list(phrase_pairs),
+                skipped_pairs=[],
+                failed_pairs=[],
+            ),
+        )
+        app = create_web_app(dependencies=dependencies)
+
+        status, _headers, body = call_wsgi_app(
+            app,
+            build_wsgi_environ(
+                method="POST", body=b"action=generate&input_word_0=claim"
+            ),
+        )
+
+        self.assertEqual(status, "200 OK")
+        self.assertIn('class="generation-failure-banner"', body)
+        self.assertIn(
+            "Generation failed for &#x27;claim&#x27;: missing Gemini API key.", body
+        )
+        self.assertIn(
+            "这次生成没有产出可提交词组，请先根据上面的失败原因检查配置或重试。",
+            body,
+        )
+
     def test_load_generation_endpoint_returns_environment_configured_callable_unchanged(
         self,
     ) -> None:

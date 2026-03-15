@@ -37,13 +37,14 @@ Personal English phrase card workspace with Gemini generation, manual review, an
 3. Put your Gemini key in `key`, or set `GEMINI_API_KEY`.
 4. Keep `英语二的备考prompt.txt` in the project root.
 5. If you want Anki submission, open Anki with AnkiConnect enabled.
-6. Start the app:
+6. If your local AnkiConnect uses a custom host or port, put that JSON config into the project-root `AnkiConnect` file, or set `COPY_FORMAT_ANKI_CONNECT_URL` directly.
+7. Start the app:
 
 ```bash
 uv run python -m src.web_entrypoint
 ```
 
-7. Open:
+8. Open:
 
 ```text
 http://127.0.0.1:8031
@@ -586,10 +587,12 @@ If you are trying to adapt this project in another place, these are the settings
   - default address: `http://127.0.0.1:8031`
   - port override: `COPY_FORMAT_WEB_PORT`
 - AnkiConnect URL:
-  - defined in `src/anki_submission_gateway.py:11`
-  - default address: `http://127.0.0.1:8765`
+  - resolved in `src/anki_submission_gateway.py`
+  - explicit override: `COPY_FORMAT_ANKI_CONNECT_URL`
+  - config file override: project-root `AnkiConnect` or `COPY_FORMAT_ANKI_CONNECT_CONFIG_FILE`
+  - fallback default: `http://127.0.0.1:8765`
 
-Most users only need to touch `key`, `GEMINI_API_KEY`, or `COPY_FORMAT_WEB_PORT`.
+Most users only need to touch `key`, `GEMINI_API_KEY`, `COPY_FORMAT_WEB_PORT`, or the local `AnkiConnect` file.
 
 ## Optional Configuration
 
@@ -599,6 +602,8 @@ Most users only need to touch `key`, `GEMINI_API_KEY`, or `COPY_FORMAT_WEB_PORT`
 - `COPY_FORMAT_GEMINI_KEY_FILE`: override the local key file path
 - `COPY_FORMAT_PROMPT_FILE`: override the prompt file path only if you are relocating the same required project prompt
 - `COPY_FORMAT_GEMINI_MODEL`: override the Gemini model name, default is `gemini-2.5-pro`
+- `COPY_FORMAT_ANKI_CONNECT_URL`: override the full AnkiConnect URL directly
+- `COPY_FORMAT_ANKI_CONNECT_CONFIG_FILE`: override the path to the local `AnkiConnect` JSON config file
 
 Example:
 
@@ -607,6 +612,35 @@ COPY_FORMAT_WEB_PORT=8042 \
 COPY_FORMAT_GENERATION_CALLABLE=/absolute/path/to/local_generation_adapter.py:generate_word \
 uv run python -m src.web_entrypoint
 ```
+
+## AnkiConnect Setup
+
+The deck dropdown is loaded through AnkiConnect. If Anki is open but the deck list is still empty, check these items in order:
+
+1. Make sure Anki itself is running.
+2. Make sure the AnkiConnect add-on is installed and enabled inside Anki.
+3. If you keep an AnkiConnect config JSON, place it in the project root as `AnkiConnect`.
+4. If you prefer another location, set `COPY_FORMAT_ANKI_CONNECT_CONFIG_FILE` to that file path.
+5. If you already know the exact URL, set `COPY_FORMAT_ANKI_CONNECT_URL` instead.
+
+Important: this project can read your local AnkiConnect settings, but it cannot guess them for every user. If your Anki setup uses another host or port, you must update the local `AnkiConnect` file or set the matching environment variable yourself.
+
+Example `AnkiConnect` file:
+
+```json
+{
+    "apiKey": null,
+    "apiLogPath": null,
+    "ignoreOriginList": [],
+    "webBindAddress": "127.0.0.1",
+    "webBindPort": 8765,
+    "webCorsOriginList": [
+        "http://localhost"
+    ]
+}
+```
+
+This file is intentionally ignored by Git because it is local machine configuration.
 
 ## Required Project Files
 
@@ -627,6 +661,7 @@ Why this prompt must stay fixed:
 These files are intentionally ignored:
 
 - `key`
+- `AnkiConnect`
 
 This keeps personal credentials out of version control while preserving the required project prompt.
 
@@ -665,7 +700,8 @@ uv run python -m py_compile "src/web_entrypoint.py" "src/review_workspace.py"
   - Check whether the local page is running at `http://127.0.0.1:8031` or your overridden port.
 - Why is Anki submission not working?
   - Make sure Anki is open.
-  - Make sure AnkiConnect is installed and reachable at `http://127.0.0.1:8765`.
+  - Make sure AnkiConnect is installed and reachable at the URL resolved from `COPY_FORMAT_ANKI_CONNECT_URL`, your local `AnkiConnect` file, or the fallback `http://127.0.0.1:8765`.
+  - If your deck list is empty, verify the project-root `AnkiConnect` file points to the same host and port AnkiConnect is actually using.
   - Make sure you selected a target deck before submission.
 - Why can I not swap in another prompt?
   - This workflow depends on the copy-only extraction contract produced by the bundled prompt.

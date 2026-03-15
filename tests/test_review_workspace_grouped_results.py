@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from src.ai_generation_orchestrator import OrchestratedResultGroup
+from src.ai_generation_orchestrator import GenerationFailure, OrchestratedResultGroup
 from src.anki_submission_gateway import SubmissionResult
 from src.copy_format_contract import ExtractedPhrasePair
 from src.review_workspace import ReviewWorkspaceController
@@ -79,6 +79,37 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
         self.assertIn('class="extracted-review-area"', html)
         self.assertIn("没有可提交的提取词组。", html)
         self.assertEqual(html.count('class="phrase-box"'), 0)
+
+    def test_renders_generation_failure_message_when_request_fails(self) -> None:
+        workspace = ReviewWorkspaceController(
+            generation_action=lambda input_words: [
+                OrchestratedResultGroup(
+                    input_word="claim",
+                    full_ai_response="",
+                    extracted_phrases=[],
+                    failure=GenerationFailure(
+                        status="generation-failed",
+                        message="Generation failed for 'claim': missing Gemini API key.",
+                    ),
+                )
+            ],
+            list_decks_action=lambda: ["Default"],
+            submit_action=no_op_submit_action,
+        )
+
+        workspace.update_input_block(0, "claim")
+        workspace.generate_results()
+
+        html = workspace.render_html()
+
+        self.assertIn('class="generation-failure-banner"', html)
+        self.assertIn("生成失败", html)
+        self.assertIn("missing Gemini API key", html)
+        self.assertIn(
+            "这次生成没有产出可提交词组，请先根据上面的失败原因检查配置或重试。",
+            html,
+        )
+        self.assertNotIn("没有可提交的提取词组。", html)
 
     def test_sizes_phrase_boxes_to_fit_normal_phrase_lengths_without_truncation(
         self,

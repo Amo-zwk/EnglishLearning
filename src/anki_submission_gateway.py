@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
+import os
+from pathlib import Path
 from typing import Any, Callable, Protocol
 from urllib import request
 
@@ -10,6 +12,9 @@ from src.copy_format_contract import ExtractedPhrasePair
 
 ANKI_CONNECT_URL = "http://127.0.0.1:8765"
 ANKI_CONNECT_VERSION = 6
+ANKI_CONNECT_URL_ENV = "COPY_FORMAT_ANKI_CONNECT_URL"
+ANKI_CONNECT_CONFIG_ENV = "COPY_FORMAT_ANKI_CONNECT_CONFIG_FILE"
+DEFAULT_ANKI_CONNECT_CONFIG_FILE = "AnkiConnect"
 
 
 class MissingDeckSelectionError(ValueError):
@@ -91,11 +96,11 @@ def build_basic_notes(
 class AnkiConnectHttpClient:
     def __init__(
         self,
-        base_url: str = ANKI_CONNECT_URL,
+        base_url: str | None = None,
         version: int = ANKI_CONNECT_VERSION,
         post_json: Callable[[str, dict[str, Any]], dict[str, Any]] | None = None,
     ) -> None:
-        self._base_url = base_url
+        self._base_url = base_url or resolve_anki_connect_url()
         self._version = version
         self._post_json = post_json or self._default_post_json
 
@@ -124,6 +129,41 @@ class AnkiConnectHttpClient:
         with request.urlopen(http_request) as http_response:
             response_body = http_response.read().decode("utf-8")
         return json.loads(response_body)
+
+
+def resolve_anki_connect_url() -> str:
+    configured_url = os.environ.get(ANKI_CONNECT_URL_ENV, "").strip()
+    if configured_url:
+        return configured_url
+
+    config_path_text = os.environ.get(
+        ANKI_CONNECT_CONFIG_ENV, DEFAULT_ANKI_CONNECT_CONFIG_FILE
+    ).strip()
+    if not config_path_text:
+        return ANKI_CONNECT_URL
+
+    config_path = Path(config_path_text).expanduser()
+    if not config_path.is_absolute():
+        config_path = Path.cwd() / config_path
+
+    if not config_path.is_file():
+        return ANKI_CONNECT_URL
+
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ANKI_CONNECT_URL
+
+    if not isinstance(payload, dict):
+        return ANKI_CONNECT_URL
+
+    bind_address = payload.get("webBindAddress", "")
+    bind_port = payload.get("webBindPort")
+    if not isinstance(bind_address, str) or not bind_address.strip():
+        return ANKI_CONNECT_URL
+    if not isinstance(bind_port, int):
+        return ANKI_CONNECT_URL
+    return f"http://{bind_address.strip()}:{bind_port}"
 
 
 class AnkiConnectGateway:

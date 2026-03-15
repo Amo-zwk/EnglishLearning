@@ -37,13 +37,14 @@ Personal English phrase card workspace with Gemini generation, manual review, an
 3. 把 Gemini key 放进 `key`，或者设置 `GEMINI_API_KEY`。
 4. 确保 `英语二的备考prompt.txt` 在项目根目录。
 5. 如果要提交到 Anki，先打开装有 AnkiConnect 的 Anki。
-6. 启动应用：
+6. 如果你本地的 AnkiConnect 使用了自定义地址或端口，把对应 JSON 配置放到项目根目录 `AnkiConnect`，或者直接设置 `COPY_FORMAT_ANKI_CONNECT_URL`。
+7. 启动应用：
 
 ```bash
 uv run python -m src.web_entrypoint
 ```
 
-7. 打开：
+8. 打开：
 
 ```text
 http://127.0.0.1:8031
@@ -586,10 +587,12 @@ http://127.0.0.1:8031
   - 默认地址：`http://127.0.0.1:8031`
   - 端口覆盖：`COPY_FORMAT_WEB_PORT`
 - AnkiConnect URL：
-  - 定义位置：`src/anki_submission_gateway.py:11`
-  - 默认地址：`http://127.0.0.1:8765`
+  - 解析逻辑在：`src/anki_submission_gateway.py`
+  - 显式覆盖：`COPY_FORMAT_ANKI_CONNECT_URL`
+  - 配置文件覆盖：项目根目录 `AnkiConnect` 或 `COPY_FORMAT_ANKI_CONNECT_CONFIG_FILE`
+  - 最终兜底默认值：`http://127.0.0.1:8765`
 
-大多数情况下，你真正需要改的只是 `key`、`GEMINI_API_KEY` 或 `COPY_FORMAT_WEB_PORT`。
+大多数情况下，你真正需要改的只是 `key`、`GEMINI_API_KEY`、`COPY_FORMAT_WEB_PORT`，或者本地 `AnkiConnect` 文件。
 
 ## 可选配置
 
@@ -599,6 +602,8 @@ http://127.0.0.1:8031
 - `COPY_FORMAT_GEMINI_KEY_FILE`: 覆盖本地 key 文件路径
 - `COPY_FORMAT_PROMPT_FILE`: 仅用于把同一份必需 prompt 放到其他路径时覆盖默认位置
 - `COPY_FORMAT_GEMINI_MODEL`: 覆盖 Gemini 模型名，默认值为 `gemini-2.5-pro`
+- `COPY_FORMAT_ANKI_CONNECT_URL`: 直接覆盖完整的 AnkiConnect URL
+- `COPY_FORMAT_ANKI_CONNECT_CONFIG_FILE`: 覆盖本地 `AnkiConnect` JSON 配置文件路径
 
 示例：
 
@@ -607,6 +612,35 @@ COPY_FORMAT_WEB_PORT=8042 \
 COPY_FORMAT_GENERATION_CALLABLE=/absolute/path/to/local_generation_adapter.py:generate_word \
 uv run python -m src.web_entrypoint
 ```
+
+## AnkiConnect 配置
+
+目标 deck 下拉框依赖 AnkiConnect 返回的 deck 列表。如果 Anki 已经打开，但页面里还是没有 deck，可以按这个顺序检查：
+
+1. 确认 Anki 本体已经启动。
+2. 确认 Anki 内部已经安装并启用了 AnkiConnect 插件。
+3. 如果你保存了 AnkiConnect 的配置 JSON，把它放到项目根目录，文件名就叫 `AnkiConnect`。
+4. 如果你想把这个文件放在别处，设置 `COPY_FORMAT_ANKI_CONNECT_CONFIG_FILE` 指向那个路径。
+5. 如果你已经知道准确 URL，也可以直接设置 `COPY_FORMAT_ANKI_CONNECT_URL`。
+
+注意：项目现在可以读取你本地的 AnkiConnect 配置，但它不能替每个用户猜出自己的实际设置。如果你的 AnkiConnect 不是默认 host 或 port，就需要你自己把本地 `AnkiConnect` 文件改成真实配置，或者设置对应环境变量。
+
+`AnkiConnect` 文件示例：
+
+```json
+{
+    "apiKey": null,
+    "apiLogPath": null,
+    "ignoreOriginList": [],
+    "webBindAddress": "127.0.0.1",
+    "webBindPort": 8765,
+    "webCorsOriginList": [
+        "http://localhost"
+    ]
+}
+```
+
+这个文件属于本机本地配置，默认不会提交到 Git。
 
 ## 项目必需文件
 
@@ -627,6 +661,7 @@ uv run python -m src.web_entrypoint
 以下文件会被有意忽略：
 
 - `key`
+- `AnkiConnect`
 
 这样可以避免把个人凭据提交到版本控制，同时保留项目必需 prompt。
 
@@ -665,7 +700,8 @@ uv run python -m py_compile "src/web_entrypoint.py" "src/review_workspace.py"
   - 再检查本地页面是否运行在 `http://127.0.0.1:8031` 或你自定义的端口。
 - 为什么提交到 Anki 不工作？
   - 确认 Anki 已经打开。
-  - 确认已经安装 AnkiConnect，且地址仍然是 `http://127.0.0.1:8765`。
+  - 确认已经安装 AnkiConnect，并且它能通过 `COPY_FORMAT_ANKI_CONNECT_URL`、本地 `AnkiConnect` 文件或兜底地址 `http://127.0.0.1:8765` 被访问到。
+  - 如果 deck 列表为空，先核对项目根目录 `AnkiConnect` 文件里的 host 和 port 是否和你实际 AnkiConnect 一致。
   - 确认提交前已经选择目标 deck。
 - 为什么不能换成别的 prompt？
   - 这套工作流依赖仓库自带 prompt 产出的复制专用提取契约。

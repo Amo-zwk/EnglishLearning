@@ -381,6 +381,18 @@ def render_page(workspace_html: str) -> str:
         .result-card-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }}
         .result-card-header h2 {{ margin: 0; font-size: 24px; }}
         .group-generation-timing {{ display: inline-flex; align-items: center; border-radius: 999px; padding: 7px 11px; background: linear-gradient(135deg, var(--sky-soft) 0%, #edf5fb 100%); color: #2a6288; font-weight: 700; font-size: 13px; border: 1px solid rgba(86, 130, 165, 0.18); }}
+        .generation-failure-banner {{
+            display: grid;
+            gap: 8px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(181, 83, 52, 0.18);
+            background: linear-gradient(135deg, rgba(255, 236, 228, 0.98) 0%, rgba(255, 246, 242, 0.96) 100%);
+            color: #702f1f;
+            box-shadow: 0 10px 20px rgba(181, 83, 52, 0.08);
+        }}
+        .generation-failure-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.82; }}
+        .generation-failure-message {{ margin: 0; line-height: 1.7; font-weight: 700; }}
         .full-response-panel {{ margin: 0; border: 1px solid rgba(105, 132, 188, 0.14); border-radius: var(--radius-lg); background: rgba(243, 246, 255, 0.72); overflow: hidden; }}
         .full-response-toggle {{ cursor: pointer; list-style: none; padding: 14px 16px; font-weight: 700; color: #36516f; background: rgba(232, 239, 252, 0.86); }}
         .full-response-toggle::-webkit-details-marker {{ display: none; }}
