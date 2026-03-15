@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from html import escape
-import json
 import time
 import math
 from typing import Callable
@@ -190,125 +189,6 @@ class ReviewWorkspaceController:
         self.state = replace(self.state, submission_outcomes=submission_outcomes)
         return submission_outcomes
 
-    def export_session(self) -> str:
-        payload = {
-            "input_blocks": [
-                input_block.value for input_block in self.state.input_blocks
-            ],
-            "available_decks": list(self.state.available_decks),
-            "selected_deck": self.state.selected_deck,
-            "selected_pairs_by_group": [
-                list(group_selection)
-                for group_selection in self.state.selected_pairs_by_group
-            ],
-            "locked_pairs_by_group": [
-                list(group_locking)
-                for group_locking in self.state.locked_pairs_by_group
-            ],
-            "last_generation_duration_seconds": self.state.last_generation_duration_seconds,
-            "result_groups": [
-                {
-                    "input_word": result_group.input_word,
-                    "full_ai_response": result_group.full_ai_response,
-                    "generation_duration_seconds": result_group.generation_duration_seconds,
-                    "failure": (
-                        None
-                        if result_group.failure is None
-                        else {
-                            "status": result_group.failure.status,
-                            "message": result_group.failure.message,
-                        }
-                    ),
-                    "extracted_phrases": [
-                        {"front": phrase_pair.front, "back": phrase_pair.back}
-                        for phrase_pair in result_group.extracted_phrases
-                    ],
-                }
-                for result_group in self.state.result_groups
-            ],
-            "submission_outcomes": [
-                {
-                    "input_word": outcome.input_word,
-                    "submitted_count": outcome.submitted_count,
-                    "skipped_count": outcome.skipped_count,
-                    "failed_count": outcome.failed_count,
-                    "submitted_pairs": [
-                        {"front": phrase_pair.front, "back": phrase_pair.back}
-                        for phrase_pair in outcome.submitted_pairs
-                    ],
-                    "skipped_pairs": [
-                        {"front": phrase_pair.front, "back": phrase_pair.back}
-                        for phrase_pair in outcome.skipped_pairs
-                    ],
-                    "failed_pairs": [
-                        {"front": phrase_pair.front, "back": phrase_pair.back}
-                        for phrase_pair in outcome.failed_pairs
-                    ],
-                    "error_message": outcome.error_message,
-                }
-                for outcome in self.state.submission_outcomes
-            ],
-        }
-        return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-
-    def import_session(self, session_payload: str) -> None:
-        data = json.loads(session_payload)
-        if not isinstance(data, dict):
-            raise ValueError("Session payload must be a JSON object.")
-
-        input_values = data.get("input_blocks", [])
-        result_groups_data = data.get("result_groups", [])
-        if not isinstance(input_values, list) or not isinstance(
-            result_groups_data, list
-        ):
-            raise ValueError("Session payload is missing required list fields.")
-
-        input_blocks = [
-            InputBlock(value=value if isinstance(value, str) else "")
-            for value in (input_values or [""])
-        ]
-        result_groups = [
-            self._deserialize_result_group(item) for item in result_groups_data
-        ]
-        selected_pairs_by_group = self._coerce_boolean_matrix(
-            data.get("selected_pairs_by_group", []),
-            result_groups,
-            default_value=True,
-        )
-        locked_pairs_by_group = self._coerce_boolean_matrix(
-            data.get("locked_pairs_by_group", []),
-            result_groups,
-            default_value=False,
-        )
-        submission_outcomes = [
-            self._deserialize_submission_outcome(item)
-            for item in data.get("submission_outcomes", [])
-            if isinstance(item, dict)
-        ]
-
-        self.state = ReviewWorkspaceState(
-            input_blocks=input_blocks,
-            result_groups=result_groups,
-            available_decks=list(self.state.available_decks)
-            if self.state.available_decks
-            else [
-                deck_name
-                for deck_name in data.get("available_decks", [])
-                if isinstance(deck_name, str)
-            ],
-            selected_deck=(
-                data.get("selected_deck", "")
-                if isinstance(data.get("selected_deck", ""), str)
-                else ""
-            ),
-            selected_pairs_by_group=selected_pairs_by_group,
-            locked_pairs_by_group=locked_pairs_by_group,
-            submission_outcomes=submission_outcomes,
-            last_generation_duration_seconds=self._coerce_optional_float(
-                data.get("last_generation_duration_seconds")
-            ),
-        )
-
     def render_html(self) -> str:
         input_blocks_html = "".join(
             self._render_input_block(index=index, input_block=input_block)
@@ -324,7 +204,6 @@ class ReviewWorkspaceController:
         )
         copy_export_html = self._render_copy_export_area()
         review_overview_html = self._render_review_overview()
-        session_panel_html = self._render_session_panel()
         return (
             '<section class="review-workspace">'
             '<div class="input-blocks">'
@@ -334,7 +213,6 @@ class ReviewWorkspaceController:
             f"{self._render_generation_timing()}"
             f"{review_overview_html}"
             f"{copy_export_html}"
-            f"{session_panel_html}"
             '<section class="deck-selection-area">'
             '<label for="deck-selection">目标 Deck</label>'
             f'<select id="deck-selection" name="selected_deck" class="deck-selection">{deck_options_html}</select>'
@@ -373,22 +251,6 @@ class ReviewWorkspaceController:
             f'<strong class="review-overview-value">{selected_count}</strong></div>'
             '<div class="review-overview-metric"><span class="review-overview-label">锁定优先</span>'
             f'<strong class="review-overview-value">{locked_count}</strong></div>'
-            "</section>"
-        )
-
-    def _render_session_panel(self) -> str:
-        session_payload = self.export_session()
-        rows = self._measure_rows(session_payload)
-        return (
-            '<section class="session-management-area">'
-            '<div class="session-management-header">'
-            "<h2>审核会话</h2>"
-            '<button type="button" class="secondary-action session-save-button" data-session-save>保存当前会话</button>'
-            "</div>"
-            '<p class="session-management-help">保存时会包含输入内容、生成结果、勾选状态、锁定状态、Deck 选择和最近一次提交反馈。恢复时不会重新生成，也不会自动提交。</p>'
-            f'<textarea id="session-payload" name="session_payload" class="session-payload-text" rows="{rows}" data-session-payload>{escape(session_payload)}</textarea>'
-            '<p class="session-management-feedback" data-session-feedback aria-live="polite"></p>'
-            '<button type="submit" name="action" value="load-session" class="secondary-action session-load-button">恢复会话</button>'
             "</section>"
         )
 
@@ -644,133 +506,6 @@ class ReviewWorkspaceController:
                 "</section>"
             )
         return "".join(cards_html)
-
-    @staticmethod
-    def _deserialize_phrase_pair(payload: object) -> ExtractedPhrasePair:
-        if not isinstance(payload, dict):
-            return ExtractedPhrasePair(front="", back="")
-        front = payload.get("front", "")
-        back = payload.get("back", "")
-        return ExtractedPhrasePair(
-            front=front if isinstance(front, str) else "",
-            back=back if isinstance(back, str) else "",
-        )
-
-    @classmethod
-    def _deserialize_result_group(cls, payload: object) -> OrchestratedResultGroup:
-        if not isinstance(payload, dict):
-            raise ValueError("Result group payload must be an object.")
-        failure_payload = payload.get("failure")
-        extracted_phrases_payload = payload.get("extracted_phrases", [])
-        failure = None
-        if isinstance(failure_payload, dict):
-            status = failure_payload.get("status", "")
-            message = failure_payload.get("message", "")
-            if isinstance(status, str) and isinstance(message, str):
-                from src.ai_generation_orchestrator import GenerationFailure
-
-                failure = GenerationFailure(status=status, message=message)
-        return OrchestratedResultGroup(
-            input_word=(
-                payload.get("input_word", "")
-                if isinstance(payload.get("input_word", ""), str)
-                else ""
-            ),
-            full_ai_response=(
-                payload.get("full_ai_response", "")
-                if isinstance(payload.get("full_ai_response", ""), str)
-                else ""
-            ),
-            extracted_phrases=[
-                cls._deserialize_phrase_pair(item)
-                for item in (
-                    extracted_phrases_payload
-                    if isinstance(extracted_phrases_payload, list)
-                    else []
-                )
-            ],
-            failure=failure,
-            generation_duration_seconds=cls._coerce_optional_float(
-                payload.get("generation_duration_seconds")
-            ),
-        )
-
-    @classmethod
-    def _deserialize_submission_outcome(cls, payload: object) -> GroupSubmissionOutcome:
-        if not isinstance(payload, dict):
-            raise ValueError("Submission outcome payload must be an object.")
-        submitted_pairs_payload = payload.get("submitted_pairs", [])
-        skipped_pairs_payload = payload.get("skipped_pairs", [])
-        failed_pairs_payload = payload.get("failed_pairs", [])
-        return GroupSubmissionOutcome(
-            input_word=payload.get("input_word", "")
-            if isinstance(payload.get("input_word", ""), str)
-            else "",
-            submitted_count=cls._coerce_non_negative_int(
-                payload.get("submitted_count")
-            ),
-            skipped_count=cls._coerce_non_negative_int(payload.get("skipped_count")),
-            failed_count=cls._coerce_non_negative_int(payload.get("failed_count")),
-            submitted_pairs=[
-                cls._deserialize_phrase_pair(item)
-                for item in (
-                    submitted_pairs_payload
-                    if isinstance(submitted_pairs_payload, list)
-                    else []
-                )
-            ],
-            skipped_pairs=[
-                cls._deserialize_phrase_pair(item)
-                for item in (
-                    skipped_pairs_payload
-                    if isinstance(skipped_pairs_payload, list)
-                    else []
-                )
-            ],
-            failed_pairs=[
-                cls._deserialize_phrase_pair(item)
-                for item in (
-                    failed_pairs_payload
-                    if isinstance(failed_pairs_payload, list)
-                    else []
-                )
-            ],
-            error_message=payload.get("error_message", "")
-            if isinstance(payload.get("error_message", ""), str)
-            else "",
-        )
-
-    @classmethod
-    def _coerce_boolean_matrix(
-        cls,
-        payload: object,
-        result_groups: list[OrchestratedResultGroup],
-        default_value: bool,
-    ) -> list[list[bool]]:
-        rows = payload if isinstance(payload, list) else []
-        normalized_rows: list[list[bool]] = []
-        for group_index, result_group in enumerate(result_groups):
-            row_payload = rows[group_index] if group_index < len(rows) else []
-            row = row_payload if isinstance(row_payload, list) else []
-            normalized_rows.append(
-                [
-                    row[phrase_index]
-                    if phrase_index < len(row) and isinstance(row[phrase_index], bool)
-                    else default_value
-                    for phrase_index, _phrase_pair in enumerate(
-                        result_group.extracted_phrases
-                    )
-                ]
-            )
-        return normalized_rows
-
-    @staticmethod
-    def _coerce_non_negative_int(value: object) -> int:
-        return value if isinstance(value, int) and value >= 0 else 0
-
-    @staticmethod
-    def _coerce_optional_float(value: object) -> float | None:
-        return value if isinstance(value, (int, float)) else None
 
     def _export_phrase_pairs_by_group(
         self,

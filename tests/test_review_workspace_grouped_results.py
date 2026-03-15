@@ -50,7 +50,6 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
         self.assertIn('class="full-ai-response"', html)
         self.assertIn('class="extracted-review-area"', html)
         self.assertIn('class="review-overview"', html)
-        self.assertIn('class="session-management-area"', html)
         self.assertEqual(html.count('class="phrase-box"'), 4)
         self.assertEqual(html.count('class="phrase-front-input"'), 4)
         self.assertEqual(html.count('class="phrase-back-input"'), 4)
@@ -228,11 +227,6 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
         self.assertIn('id="submission-preview-cards"', html)
         self.assertIn('class="submission-preview-card-front">in power</p>', html)
         self.assertIn('class="submission-preview-card-back">当权</p>', html)
-        self.assertIn('name="session_payload"', html)
-        self.assertIn(
-            "保存时会包含输入内容、生成结果、勾选状态、锁定状态、Deck 选择和最近一次提交反馈。",
-            html,
-        )
 
     def test_copy_export_area_only_includes_selected_phrase_pairs(self) -> None:
         workspace = ReviewWorkspaceController(
