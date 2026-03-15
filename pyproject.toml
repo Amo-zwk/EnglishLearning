@@ -1,7 +1,7 @@
 [project]
-name = "copy-format-contract"
+name = "english-learning"
 version = "0.1.0"
-description = "Copy-format extraction contract and parser"
+description = "Personal English phrase card workspace with Gemini generation and Anki submission"
 requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
