@@ -7,10 +7,13 @@ EnglishLearning is a personal English phrase card workspace. You enter one or mo
 ## Quick View
 
 - Multi-word input blocks for batch generation
+- Sticky review overview for larger review batches
 - Full AI response kept visible for manual review
 - Editable phrase pairs before submission
 - Card-based final submission preview
 - Duplicate `Front` handling with manual lock priority
+- Session save and restore without regenerating results
+- Clearer Anki submission feedback for submitted, skipped, and failed items
 - Local Anki deck selection through AnkiConnect
 
 ## Screenshot
@@ -22,7 +25,10 @@ EnglishLearning is a personal English phrase card workspace. You enter one or mo
 - Generates full AI explanations for one or more input words
 - Extracts phrase pairs from the special copy format output
 - Lets you review, edit, select, and lock duplicate `Front` values before submission
+- Keeps a review summary visible while you work through larger batches
 - Shows the final Anki submission set with a card-based preview
+- Lets you save the current review session and restore it later from a JSON payload
+- Shows clearer post-submit feedback with grouped submitted, skipped, and failed results
 - Submits selected phrase pairs to Anki through AnkiConnect
 
 ## Workflow
@@ -32,8 +38,10 @@ EnglishLearning is a personal English phrase card workspace. You enter one or mo
 3. Review the full response and the extracted phrase pairs.
 4. Edit `Front` and `Back` values when needed.
 5. Optionally uncheck low-value pairs or lock a duplicate `Front` to keep a preferred version.
-6. Preview the final submission cards.
-7. Select a target deck and submit to Anki.
+6. Optionally save the current review session if you want to continue later.
+7. Preview the final submission cards.
+8. Select a target deck and submit to Anki.
+9. Review grouped submission feedback for added, skipped, and failed items.
 
 ## Example Session
 
@@ -50,7 +58,10 @@ What you review on the page:
 - Extracted phrase pairs from the copy-only format
 - Checkboxes for whether each pair should be submitted
 - Lock controls for choosing the preferred item when duplicate `Front` values appear
+- A sticky review overview that keeps batch counts visible
 - A card-based preview of the exact notes that will be sent to Anki
+- A session export area for saving and restoring the current review state
+- Submission feedback grouped by submitted, skipped, and failed results
 
 This keeps the AI output visible while still letting you manually curate the final study cards.
 
@@ -59,19 +70,22 @@ This keeps the AI output visible while still letting you manually curate the fin
 Even without a bundled screenshot, the review page is organized around a few practical panels:
 
 - input blocks for one or more words
+- a sticky review overview for batch progress
 - the full Gemini response for each word
 - extracted phrase pairs with editable `Front` and `Back`
 - selection and lock controls for duplicate handling
 - a card-based submission preview before sending notes to Anki
+- a session save and restore panel for pausing and resuming review work
+- clearer submission feedback cards after sending notes to Anki
 
 This layout is meant to preserve context from the AI output while keeping the final Anki submission set easy to inspect.
 
 ## Roadmap
 
 - GitHub roadmap issue: [#1 Track next workflow improvements](https://github.com/Amo-zwk/EnglishLearning/issues/1)
-- [#2 Improve review layout for larger batches](https://github.com/Amo-zwk/EnglishLearning/issues/2)
-- [#3 Support saving and restoring review sessions](https://github.com/Amo-zwk/EnglishLearning/issues/3)
-- [#4 Add clearer Anki submission feedback](https://github.com/Amo-zwk/EnglishLearning/issues/4)
+- Done: [#2 Improve review layout for larger batches](https://github.com/Amo-zwk/EnglishLearning/issues/2)
+- Done: [#3 Support saving and restoring review sessions](https://github.com/Amo-zwk/EnglishLearning/issues/3)
+- Done: [#4 Add clearer Anki submission feedback](https://github.com/Amo-zwk/EnglishLearning/issues/4)
 - Planned polish includes a README screenshot or GIF once browser capture tooling is available in this environment.
 - Future items stay focused on practical workflow improvements rather than turning the project into a public SaaS product.
 
