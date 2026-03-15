@@ -356,15 +356,32 @@ def render_page(workspace_html: str) -> str:
         .submission-global-banner-submitted {{ background: linear-gradient(135deg, rgba(227, 244, 232, 0.98) 0%, rgba(242, 249, 244, 0.96) 100%); color: #244b2e; }}
         .submission-global-banner-mixed, .submission-global-banner-skipped {{ background: linear-gradient(135deg, rgba(251, 241, 214, 0.98) 0%, rgba(255, 248, 230, 0.96) 100%); color: #694d14; }}
         .submission-global-banner-partial, .submission-global-banner-failed {{ background: linear-gradient(135deg, rgba(252, 229, 222, 0.98) 0%, rgba(255, 242, 238, 0.96) 100%); color: #702f1f; }}
+        .submission-global-banner-heading {{ display: flex; justify-content: space-between; align-items: start; gap: 14px; flex-wrap: wrap; }}
+        .submission-global-banner-title-block {{ display: grid; gap: 8px; min-width: min(100%, 420px); }}
         .submission-global-banner-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.82; }}
         .submission-global-banner-title {{ margin: 0; font-size: clamp(24px, 4vw, 32px); }}
+        .submission-global-status-chip {{ display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(145, 112, 76, 0.16); background: rgba(255, 255, 255, 0.5); font-size: 13px; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; }}
+        .submission-global-status-chip-submitted {{ color: #1e5a2b; background: rgba(242, 255, 245, 0.7); }}
+        .submission-global-status-chip-mixed, .submission-global-status-chip-skipped {{ color: #7a590f; background: rgba(255, 251, 229, 0.74); }}
+        .submission-global-status-chip-partial, .submission-global-status-chip-failed {{ color: #8a2e1b; background: rgba(255, 242, 238, 0.78); }}
         .submission-global-banner-metrics {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0; }}
-        .submission-global-banner-metrics span {{ display: grid; gap: 4px; padding: 10px 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.42); border: 1px solid rgba(145, 112, 76, 0.12); font-weight: 700; line-height: 1.5; }}
+        .submission-global-metric-card {{ display: grid; gap: 4px; padding: 12px 13px; border-radius: 16px; background: rgba(255, 255, 255, 0.42); border: 1px solid rgba(145, 112, 76, 0.12); line-height: 1.5; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26); }}
+        .submission-global-metric-label {{ font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.74; }}
+        .submission-global-metric-value {{ font-size: 18px; color: #2f2d2b; }}
+        .submission-global-metric-processed .submission-global-metric-value {{ color: #30485c; }}
+        .submission-global-metric-submitted .submission-global-metric-value {{ color: #1e5a2b; }}
+        .submission-global-metric-skipped .submission-global-metric-value {{ color: #8a6210; }}
+        .submission-global-metric-failed .submission-global-metric-value {{ color: #8a2e1b; }}
         .submission-global-banner-text {{ margin: 0; line-height: 1.6; font-weight: 700; }}
         .submission-global-detail {{ display: grid; gap: 10px; padding: 14px 16px; border-radius: var(--radius-lg); background: rgba(255, 255, 255, 0.46); border: 1px solid rgba(145, 112, 76, 0.12); }}
+        .submission-global-detail-submitted {{ border-left: 4px solid rgba(56, 124, 73, 0.45); }}
+        .submission-global-detail-skipped {{ border-left: 4px solid rgba(184, 135, 29, 0.45); }}
+        .submission-global-detail-failed {{ border-left: 4px solid rgba(188, 78, 50, 0.45); }}
+        .submission-global-detail-header {{ display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }}
         .submission-global-detail-title {{ margin: 0; font-size: 18px; }}
+        .submission-global-detail-count {{ display: inline-flex; align-items: center; min-height: 28px; padding: 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.62); border: 1px solid rgba(145, 112, 76, 0.12); font-size: 12px; font-weight: 800; letter-spacing: 0.04em; }}
         .submission-global-detail-list {{ display: grid; gap: 10px; padding-left: 20px; margin: 0; }}
-        .submission-global-item {{ display: grid; gap: 4px; }}
+        .submission-global-item {{ display: grid; gap: 5px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.58); border: 1px solid rgba(145, 112, 76, 0.1); }}
         .submission-global-item-front {{ font-weight: 700; color: #2f2d2b; }}
         .submission-global-item-back {{ color: #62584d; }}
         .submission-global-item-reason {{ color: #6b6f76; font-size: 14px; line-height: 1.6; }}
@@ -482,6 +499,7 @@ def render_page(workspace_html: str) -> str:
             .page-hero {{ padding: 22px 18px; border-radius: 24px; }}
             .review-overview {{ position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }}
             .deck-selection-area, .copy-export-area, .grouped-result-card {{ padding: 16px; border-radius: 20px; }}
+            .submission-global-banner-heading {{ display: grid; }}
             .deck-selection-header {{ grid-template-columns: 1fr; }}
             .action-bar {{ display: grid; }}
             button {{ width: 100%; justify-content: center; }}

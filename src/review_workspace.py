@@ -558,16 +558,21 @@ class ReviewWorkspaceController:
             '<section class="submission-global-banner '
             f'submission-global-banner-{summary.status_tone}" '
             'data-submission-feedback-banner aria-live="polite">'
+            '<div class="submission-global-banner-heading">'
+            '<div class="submission-global-banner-title-block">'
             '<p class="submission-global-banner-label">提交结果</p>'
             f'<h2 class="submission-global-banner-title">{escape(self._submission_title(summary.status_tone))}</h2>'
-            '<div class="submission-global-banner-metrics">'
-            f"<span>目标 Deck: {escape(summary.deck_name or '未选择')}</span>"
-            f"<span>本次处理 {summary.processed_count} 条</span>"
-            f"<span>已加入 {summary.submitted_count} 条</span>"
-            f"<span>重复跳过 {summary.skipped_count} 条</span>"
-            f"<span>提交失败 {summary.failed_count} 条</span>"
-            "</div>"
             f'<p class="submission-global-banner-text">{escape(summary.message)}</p>'
+            "</div>"
+            f'<div class="submission-global-status-chip submission-global-status-chip-{summary.status_tone}">{escape(self._submission_status_badge(summary))}</div>'
+            "</div>"
+            '<div class="submission-global-banner-metrics">'
+            f"{self._render_metric_card('目标 Deck', escape(summary.deck_name or '未选择'), 'submission-global-metric-deck')}"
+            f"{self._render_metric_card('本次处理', f'{summary.processed_count} 条', 'submission-global-metric-processed')}"
+            f"{self._render_metric_card('已加入', f'{summary.submitted_count} 条', 'submission-global-metric-submitted')}"
+            f"{self._render_metric_card('重复跳过', f'{summary.skipped_count} 条', 'submission-global-metric-skipped')}"
+            f"{self._render_metric_card('提交失败', f'{summary.failed_count} 条', 'submission-global-metric-failed')}"
+            "</div>"
             f"{self._render_summary_bucket('submitted', '本次已加入', summary.submitted_items)}"
             f"{self._render_summary_bucket('skipped', '重复跳过', summary.skipped_items)}"
             f"{self._render_summary_bucket('failed', '提交失败', summary.failed_items)}"
@@ -604,10 +609,32 @@ class ReviewWorkspaceController:
         )
         return (
             f'<section class="submission-global-detail submission-global-detail-{status}">'
+            '<div class="submission-global-detail-header">'
             f'<h3 class="submission-global-detail-title">{escape(title)}</h3>'
+            f'<span class="submission-global-detail-count">{len(items)} 条</span>'
+            "</div>"
             f'<ul class="submission-global-detail-list">{items_html}</ul>'
             "</section>"
         )
+
+    @staticmethod
+    def _render_metric_card(label: str, value: str, tone_class: str) -> str:
+        return (
+            f'<div class="submission-global-metric-card {tone_class}">'
+            f'<span class="submission-global-metric-label">{label}</span>'
+            f'<strong class="submission-global-metric-value">{value}</strong>'
+            "</div>"
+        )
+
+    @staticmethod
+    def _submission_status_badge(summary: SubmissionSummary) -> str:
+        if summary.failed_count:
+            return "需处理失败项"
+        if summary.skipped_count and summary.submitted_count:
+            return "已写入，含重复跳过"
+        if summary.skipped_count:
+            return "本次无新增"
+        return "已写入目标 Deck"
 
     def _render_copy_export_area(self) -> str:
         plain_text = self._build_copy_export_text()

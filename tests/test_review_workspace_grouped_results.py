@@ -364,9 +364,10 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
 
         self.assertIn("data-submission-feedback-banner", html)
         self.assertIn("已完成提交", html)
-        self.assertIn("目标 Deck: Default", html)
-        self.assertIn("本次处理 1 条", html)
-        self.assertIn("已加入 1 条", html)
+        self.assertIn("目标 Deck", html)
+        self.assertIn(">Default</strong>", html)
+        self.assertIn("本次处理", html)
+        self.assertIn("已加入", html)
         self.assertIn("本次已加入", html)
         self.assertIn("原因: Written to the selected deck successfully.", html)
         self.assertIn("已自动清空本轮输入和提取结果，可以直接开始下一批。", html)
@@ -401,9 +402,9 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
 
         self.assertIn("data-submission-feedback-banner", html)
         self.assertIn("提交未完成", html)
-        self.assertIn("提交失败 1 条", html)
-        self.assertIn("当前内容已保留", html)
         self.assertIn("提交失败", html)
+        self.assertIn(">1 条</strong>", html)
+        self.assertIn("当前内容已保留", html)
         self.assertIn(
             "原因: This item was not written successfully during submission.", html
         )

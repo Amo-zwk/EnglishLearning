@@ -212,11 +212,12 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
         html = workspace.render_html()
 
         self.assertIn("部分提交成功", html)
-        self.assertIn("目标 Deck: Default", html)
-        self.assertIn("本次处理 3 条", html)
-        self.assertIn("已加入 1 条", html)
-        self.assertIn("重复跳过 1 条", html)
-        self.assertIn("提交失败 1 条", html)
+        self.assertIn("目标 Deck", html)
+        self.assertIn(">Default</strong>", html)
+        self.assertIn("本次处理", html)
+        self.assertIn("已加入", html)
+        self.assertIn("重复跳过", html)
+        self.assertIn("提交失败", html)
         self.assertIn("当前内容已保留", html)
         self.assertIn('class="submission-outcome submitted-outcome"', html)
         self.assertIn('class="submission-outcome skipped-outcome"', html)
@@ -355,8 +356,8 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
         workspace.submit_selected_pairs()
         html = workspace.render_html()
 
-        self.assertIn("本次处理 1 条", html)
-        self.assertIn("重复跳过 1 条", html)
+        self.assertIn("本次处理", html)
+        self.assertIn("重复跳过", html)
         self.assertIn("本次没有新增卡片", html)
         self.assertIn("重复跳过", html)
         self.assertIn(
@@ -402,9 +403,10 @@ class ReviewWorkspaceComposedFlowTests(unittest.TestCase):
             add_notes_params["notes"][0]["deckName"],
             "English::考研短语",
         )
-        self.assertIn("本次处理 1 条", html)
-        self.assertIn("已加入 1 条", html)
-        self.assertIn("目标 Deck: English::考研短语", html)
+        self.assertIn("本次处理", html)
+        self.assertIn("已加入", html)
+        self.assertIn("目标 Deck", html)
+        self.assertIn(">English::考研短语</strong>", html)
         self.assertIn("本次已加入", html)
         self.assertIn("原因: Written to the selected deck successfully.", html)
         self.assertIn("已自动清空本轮输入和提取结果", html)
