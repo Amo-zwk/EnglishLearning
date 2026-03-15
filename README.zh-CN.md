@@ -2,7 +2,32 @@
 
 [English README](README.md)
 
+一个把 Gemini 解析结果人工收口后再提交到 Anki 的个人英语词组制卡工作台。
+
 EnglishLearning 是一个个人使用的英语词组制卡工作台。你可以输入一个或多个英文单词，用 Gemini 生成完整解析，从复制专用格式中提取词组对，人工筛选后再提交到 Anki。
+
+## GitHub 仓库速览
+
+- 这是个人工具，不是公共 SaaS 产品
+- 可以对一个或多个输入词调用 Gemini 生成词组解析
+- 页面保留完整 AI 输出，方便人工筛选真正值得入卡的内容
+- 支持编辑提取出的 `Front` / `Back`，处理重复 `Front`，只提交你确认过的卡片
+- 支持保存审核会话并在之后恢复，整个流程以本地使用为主
+
+仓库短描述建议：
+
+```text
+Personal English phrase card workspace with Gemini generation, manual review, and Anki submission.
+```
+
+## 文档导航
+
+- 英文文档入口：[`docs/README.md`](docs/README.md)
+- 中文文档入口：[`docs/README.zh-CN.md`](docs/README.zh-CN.md)
+- 英文场景索引：[`docs/scenario/README.md`](docs/scenario/README.md)
+- 中文场景索引：[`docs/scenario/README.zh-CN.md`](docs/scenario/README.zh-CN.md)
+- 英文贡献说明：[`CONTRIBUTING.md`](CONTRIBUTING.md)
+- 中文贡献说明：[`CONTRIBUTING.zh-CN.md`](CONTRIBUTING.zh-CN.md)
 
 ## 快速了解
 

@@ -2,7 +2,32 @@
 
 [中文说明](README.zh-CN.md)
 
+Personal English phrase card workspace for turning Gemini-generated explanations into manually reviewed Anki notes.
+
 EnglishLearning is a personal English phrase card workspace. You enter one or more English words, generate full explanations with Gemini, extract phrase pairs from a copy-only format, review the results, and then submit selected cards to Anki.
+
+## GitHub Quick Intro
+
+- Personal tool, not a public SaaS product
+- Generate phrase explanations with Gemini from one or more input words
+- Review the full AI output before choosing what actually goes into Anki
+- Edit extracted `Front` and `Back` pairs, handle duplicate `Front` values, and submit only the good cards
+- Save a review session, restore it later, and keep the whole workflow local
+
+Short repo description:
+
+```text
+Personal English phrase card workspace with Gemini generation, manual review, and Anki submission.
+```
+
+## Documentation
+
+- English docs index: [`docs/README.md`](docs/README.md)
+- Chinese docs index: [`docs/README.zh-CN.md`](docs/README.zh-CN.md)
+- English scenario index: [`docs/scenario/README.md`](docs/scenario/README.md)
+- Chinese scenario index: [`docs/scenario/README.zh-CN.md`](docs/scenario/README.zh-CN.md)
+- English contribution guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Chinese contribution guide: [`CONTRIBUTING.zh-CN.md`](CONTRIBUTING.zh-CN.md)
 
 ## Quick View
 
