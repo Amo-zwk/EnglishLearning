@@ -50,6 +50,24 @@ bring
 
 这样既能保留 AI 原始解析，也能在提交前人工收口出更干净的学习卡片。
 
+## 界面重点
+
+虽然这次还没有附上仓库内截图，但当前审核页的结构已经比较清晰，核心区域包括：
+
+- 一个或多个输入词块
+- 每个词对应的完整 Gemini 响应
+- 可编辑的 `Front` / `Back` 词组对
+- 用于勾选和锁定重复项的控制区
+- 提交到 Anki 之前的卡片式预览区
+
+这样既保留了 AI 原始上下文，也让最终提交集合更容易人工确认。
+
+## Roadmap
+
+- GitHub 规划 issue: [#1 Track next workflow improvements](https://github.com/Amo-zwk/EnglishLearning/issues/1)
+- 等当前环境具备合适的浏览器截图能力后，再补 README 截图或 GIF 展示。
+- 后续迭代仍然以实用的小步优化为主，不把它扩展成公共 SaaS 产品。
+
 ## 关键规则
 
 - 只有从复制专用格式中提取出的内容才会用于 Anki 提交。

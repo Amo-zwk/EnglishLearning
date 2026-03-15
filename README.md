@@ -50,6 +50,24 @@ What you review on the page:
 
 This keeps the AI output visible while still letting you manually curate the final study cards.
 
+## Interface Highlights
+
+Even without a bundled screenshot, the review page is organized around a few practical panels:
+
+- input blocks for one or more words
+- the full Gemini response for each word
+- extracted phrase pairs with editable `Front` and `Back`
+- selection and lock controls for duplicate handling
+- a card-based submission preview before sending notes to Anki
+
+This layout is meant to preserve context from the AI output while keeping the final Anki submission set easy to inspect.
+
+## Roadmap
+
+- GitHub roadmap issue: [#1 Track next workflow improvements](https://github.com/Amo-zwk/EnglishLearning/issues/1)
+- Planned polish includes a README screenshot or GIF once browser capture tooling is available in this environment.
+- Future items stay focused on practical workflow improvements rather than turning the project into a public SaaS product.
+
 ## Key Rules
 
 - Only content extracted from the copy-only format is used for Anki submission.
