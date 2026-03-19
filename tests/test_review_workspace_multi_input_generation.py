@@ -91,6 +91,20 @@ class ReviewWorkspaceMultiInputGenerationTests(unittest.TestCase):
 
         self.assertEqual(generation_action.calls, [])
 
+    def test_can_add_fifty_input_blocks_without_triggering_generation(self) -> None:
+        generation_action = RecordingGenerationAction([])
+        workspace = ReviewWorkspaceController(
+            generation_action=generation_action,
+            list_decks_action=lambda: ["Default"],
+            submit_action=no_op_submit_action,
+            initial_input_count=2,
+        )
+
+        workspace.add_input_blocks(50)
+
+        self.assertEqual(len(workspace.state.input_blocks), 52)
+        self.assertEqual(generation_action.calls, [])
+
 
 if __name__ == "__main__":
     unittest.main()

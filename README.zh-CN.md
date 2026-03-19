@@ -590,6 +590,8 @@ http://127.0.0.1:8031
 
 - `COPY_FORMAT_WEB_PORT`: 覆盖本地 HTTP 端口
 - `COPY_FORMAT_GENERATION_CALLABLE`: 指向自定义本地生成适配器，格式为 `<file-path>:<callable-name>`
+- `COPY_FORMAT_GENERATION_API_BASE_URL`: 使用兼容 OpenAI Chat Completions 的 AI 网关基础地址，例如 `https://api.apifast.tech/v1`
+- `COPY_FORMAT_GENERATION_CONFIG_FILE`: 覆盖本地生成配置 JSON 文件路径，默认读取项目根目录 `GenerationConfig`
 - `GEMINI_API_KEY`: 从环境变量读取 Gemini key，而不是本地文件
 - `COPY_FORMAT_GEMINI_KEY_FILE`: 覆盖本地 key 文件路径
 - `COPY_FORMAT_PROMPT_FILE`: 仅用于把同一份必需 prompt 放到其他路径时覆盖默认位置
@@ -604,6 +606,17 @@ COPY_FORMAT_WEB_PORT=8042 \
 COPY_FORMAT_GENERATION_CALLABLE=/absolute/path/to/local_generation_adapter.py:generate_word \
 uv run python -m src.web_entrypoint
 ```
+
+如果你不想每次都手动传环境变量，可以在项目根目录新建本地 `GenerationConfig`：
+
+```json
+{
+    "COPY_FORMAT_GENERATION_API_BASE_URL": "https://api.apifast.tech/v1",
+    "COPY_FORMAT_GEMINI_MODEL": "gemini-2.5-pro"
+}
+```
+
+这个文件属于本机本地配置，默认不会提交到 Git。
 
 ## AnkiConnect 配置
 

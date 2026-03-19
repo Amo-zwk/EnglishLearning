@@ -50,6 +50,8 @@ class WorkspaceControllerProtocol(Protocol):
 
     def add_input_block(self) -> None: ...
 
+    def add_input_blocks(self, count: int) -> None: ...
+
     def update_input_block(self, index: int, value: str) -> None: ...
 
     def generate_results(self) -> list[OrchestratedResultGroup]: ...
@@ -513,7 +515,7 @@ def render_page(workspace_html: str) -> str:
             <h1>英语词组制卡工作台</h1>
             <p class=\"page-intro\">输入一个或多个单词，生成完整解析，核对复制专用提取结果，再把真正有价值的词组送进你的 Anki Deck。</p>
         </section>
-        <form method=\"post\"><div class=\"generation-pending-banner\" data-generation-pending-banner aria-live=\"polite\"><p class=\"generation-pending-label\">生成中</p><p class=\"generation-pending-text\">正在等待 AI 返回结果，请稍候，页面会在完成后自动刷新。</p></div><div class=\"submission-pending-banner\" data-submission-pending-banner aria-live=\"polite\"><p class=\"submission-pending-label\">提交中</p><p class=\"submission-pending-text\">正在提交选中词组到 Anki，请稍候，完成后会在页面顶部显示结果摘要。</p></div>{workspace_html}<div class=\"action-bar\"><button type=\"submit\" name=\"action\" value=\"add-input\" class=\"secondary-action\">新增输入框</button><button type=\"submit\" name=\"action\" value=\"generate\">开始生成</button><button type=\"submit\" name=\"action\" value=\"submit\">提交选中词组</button></div></form>
+        <form method=\"post\"><div class=\"generation-pending-banner\" data-generation-pending-banner aria-live=\"polite\"><p class=\"generation-pending-label\">生成中</p><p class=\"generation-pending-text\">正在等待 AI 返回结果，请稍候，页面会在完成后自动刷新。</p></div><div class=\"submission-pending-banner\" data-submission-pending-banner aria-live=\"polite\"><p class=\"submission-pending-label\">提交中</p><p class=\"submission-pending-text\">正在提交选中词组到 Anki，请稍候，完成后会在页面顶部显示结果摘要。</p></div>{workspace_html}<div class=\"action-bar\"><button type=\"submit\" name=\"action\" value=\"add-input\" class=\"secondary-action\">新增输入框</button><button type=\"submit\" name=\"action\" value=\"add-50-inputs\" class=\"secondary-action\">一次加 50 个</button><button type=\"submit\" name=\"action\" value=\"generate\">开始生成</button><button type=\"submit\" name=\"action\" value=\"submit\">提交选中词组</button></div></form>
     </main>
     <script>
         var EXPORT_OPTION_STORAGE_KEY = "copy-format-export-options";
@@ -986,6 +988,10 @@ def _apply_request_to_workspace(
     action = form_data.get("action", "").strip()
     if action == "add-input":
         workspace.add_input_block()
+        return
+
+    if action == "add-50-inputs":
+        workspace.add_input_blocks(50)
         return
 
     if action == "generate":

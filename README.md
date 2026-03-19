@@ -590,6 +590,8 @@ Most users only need to touch `key`, `GEMINI_API_KEY`, `COPY_FORMAT_WEB_PORT`, o
 
 - `COPY_FORMAT_WEB_PORT`: override the local HTTP port
 - `COPY_FORMAT_GENERATION_CALLABLE`: use a custom local generation adapter with `<file-path>:<callable-name>`
+- `COPY_FORMAT_GENERATION_API_BASE_URL`: base URL for an OpenAI-compatible Chat Completions gateway, for example `https://api.apifast.tech/v1`
+- `COPY_FORMAT_GENERATION_CONFIG_FILE`: override the local generation config JSON path, defaulting to the project-root `GenerationConfig`
 - `GEMINI_API_KEY`: use a Gemini key from the environment instead of a local file
 - `COPY_FORMAT_GEMINI_KEY_FILE`: override the local key file path
 - `COPY_FORMAT_PROMPT_FILE`: override the prompt file path only if you are relocating the same required project prompt
@@ -604,6 +606,17 @@ COPY_FORMAT_WEB_PORT=8042 \
 COPY_FORMAT_GENERATION_CALLABLE=/absolute/path/to/local_generation_adapter.py:generate_word \
 uv run python -m src.web_entrypoint
 ```
+
+If you do not want to pass environment variables every time, create a local `GenerationConfig` in the project root:
+
+```json
+{
+    "COPY_FORMAT_GENERATION_API_BASE_URL": "https://api.apifast.tech/v1",
+    "COPY_FORMAT_GEMINI_MODEL": "gemini-2.5-pro"
+}
+```
+
+This file is machine-local configuration and is ignored by Git by default.
 
 ## AnkiConnect Setup
 

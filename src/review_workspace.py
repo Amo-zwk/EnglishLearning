@@ -91,6 +91,18 @@ class ReviewWorkspaceController:
             input_blocks=[*self.state.input_blocks, InputBlock()],
         )
 
+    def add_input_blocks(self, count: int) -> None:
+        safe_count = max(count, 0)
+        if safe_count == 0:
+            return
+        self.state = replace(
+            self.state,
+            input_blocks=[
+                *self.state.input_blocks,
+                *[InputBlock() for _ in range(safe_count)],
+            ],
+        )
+
     def update_input_block(self, index: int, value: str) -> None:
         updated_blocks = list(self.state.input_blocks)
         updated_blocks[index] = InputBlock(value=value)

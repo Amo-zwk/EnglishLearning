@@ -24,6 +24,7 @@ class RecordingWorkspaceController:
         self.lock_calls: list[tuple[int, int, bool]] = []
         self.submit_calls = 0
         self.add_input_calls = 0
+        self.add_multiple_input_calls: list[int] = []
         self.generate_calls = 0
         self.state = RecordingState(
             input_blocks=[object()],
@@ -44,6 +45,11 @@ class RecordingWorkspaceController:
     def add_input_block(self) -> None:
         self.add_input_calls += 1
         self.state.input_blocks.append(object())
+
+    def add_input_blocks(self, count: int) -> None:
+        self.add_multiple_input_calls.append(count)
+        for _ in range(count):
+            self.state.input_blocks.append(object())
 
     def update_input_block(self, index: int, value: str) -> None:
         while len(self.state.input_blocks) <= index:
@@ -193,6 +199,21 @@ class WebEntryRouteTests(unittest.TestCase):
         self.assertEqual(controller.add_input_calls, 1)
         self.assertIn('class="review-workspace"', body)
 
+    def test_add_fifty_inputs_action_returns_html_with_many_additional_input_blocks(
+        self,
+    ) -> None:
+        controller = RecordingWorkspaceController()
+        app = create_web_app(lambda: controller)
+
+        status, _headers, body = call_wsgi_app(
+            app,
+            build_wsgi_environ(method="POST", body=b"action=add-50-inputs"),
+        )
+
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(controller.add_multiple_input_calls, [50])
+        self.assertIn('class="review-workspace"', body)
+
 
 class WebAppFactoryAdapterTests(unittest.TestCase):
     def test_app_factory_uses_configured_generation_callable_through_existing_workspace(
@@ -288,6 +309,8 @@ class WebAppFactoryAdapterTests(unittest.TestCase):
         self.assertIn('submitter.value !== "generate"', body)
         self.assertIn("生成中...", body)
         self.assertIn("提交中...", body)
+        self.assertIn('value="add-50-inputs"', body)
+        self.assertIn("一次加 50 个", body)
         self.assertIn(".generate-action.is-pending", body)
         self.assertIn(".submission-preview-submit-button.is-pending", body)
         self.assertIn('button.classList.add("is-pending")', body)
