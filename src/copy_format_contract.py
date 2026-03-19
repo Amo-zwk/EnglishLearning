@@ -5,7 +5,7 @@ import re
 
 
 COPY_FORMAT_PATTERN = re.compile(
-    r"\(复制专用:\s*\$(?P<front>[^$]+)\$\s*\$(?P<back>[^$]+)\$\)"
+    r"[\(（]复制专用[:：]\s*\$(?P<front>[^$]+)\$\s*\$(?P<back>[^$]+)\$[\)）]"
 )
 
 

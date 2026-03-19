@@ -78,6 +78,50 @@ class CopyFormatExtractionContractTests(unittest.TestCase):
         self.assertEqual(result.phrases[0].front, "deliver a speech")
         self.assertEqual(result.phrases[0].back, "发表演讲")
 
+    def test_accepts_copy_format_with_chinese_colon(self) -> None:
+        request = ExtractionRequest(
+            input_word="on top of",
+            ai_response=(
+                "on top of the cost 除成本之外 "
+                "(复制专用：$on top of the cost$ $除成本之外$)\n"
+                "stay on top of sth. 掌控某事的进度 "
+                "(复制专用：$stay on top of sth.$ $掌控某事的进度$)"
+            ),
+        )
+
+        result = extract_copy_format_phrase_pairs(request)
+
+        self.assertEqual(result.input_word, "on top of")
+        self.assertEqual(
+            [phrase.front for phrase in result.phrases],
+            ["on top of the cost", "stay on top of sth."],
+        )
+        self.assertEqual(
+            [phrase.back for phrase in result.phrases],
+            ["除成本之外", "掌控某事的进度"],
+        )
+
+    def test_accepts_copy_format_with_chinese_parentheses(self) -> None:
+        request = ExtractionRequest(
+            input_word="favor",
+            ai_response=(
+                "帮个忙 （复制专用：$do sb a favor$ $帮某人一个忙$）\n"
+                "回报别人 （复制专用：$return the favor$ $回报别人的人情$）"
+            ),
+        )
+
+        result = extract_copy_format_phrase_pairs(request)
+
+        self.assertEqual(result.input_word, "favor")
+        self.assertEqual(
+            [phrase.front for phrase in result.phrases],
+            ["do sb a favor", "return the favor"],
+        )
+        self.assertEqual(
+            [phrase.back for phrase in result.phrases],
+            ["帮某人一个忙", "回报别人的人情"],
+        )
+
     def test_dedupe_key_normalizes_surrounding_whitespace_only(self) -> None:
         self.assertEqual(
             make_front_dedupe_key(" deliver a speech "),
