@@ -1,0 +1,4 @@
+{
+    "COPY_FORMAT_GENERATION_API_BASE_URL": "https://api.apifast.tech/v1",
+    "COPY_FORMAT_GEMINI_MODEL": "gemini-2.5-pro"
+}
