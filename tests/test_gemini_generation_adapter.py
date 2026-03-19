@@ -176,7 +176,7 @@ class GeminiGenerationAdapterTests(unittest.TestCase):
             "待解析单词：abandon",
             recorded_request["payload"]["contents"][0]["parts"][0]["text"],
         )
-        self.assertEqual(recorded_request["timeout_seconds"], 30.0)
+        self.assertEqual(recorded_request["timeout_seconds"], 60.0)
         self.assertEqual(result["content"], "(复制专用: $abandon hope$ $放弃希望$)")
 
     def test_wraps_timeout_error_with_retry_message(self) -> None:
@@ -248,7 +248,7 @@ class GeminiGenerationAdapterTests(unittest.TestCase):
             recorded_request["payload"]["model"],
             "gemini-2.5-flash",
         )
-        self.assertEqual(recorded_request["timeout_seconds"], 30.0)
+        self.assertEqual(recorded_request["timeout_seconds"], 60.0)
         self.assertEqual(result["content"], "(复制专用: $abandon hope$ $放弃希望$)")
 
     def test_prefers_environment_model_over_generation_config_file(self) -> None:

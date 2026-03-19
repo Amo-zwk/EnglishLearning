@@ -29,7 +29,7 @@ GENERATION_CONFIG_ENV = "COPY_FORMAT_GENERATION_CONFIG_FILE"
 
 API_KEY_PATTERN = re.compile(r"AIza[0-9A-Za-z_-]{20,}")
 OPENAI_API_KEY_PATTERN = re.compile(r"sk-[0-9A-Za-z_-]{20,}")
-DEFAULT_GEMINI_TIMEOUT_SECONDS = 30.0
+DEFAULT_GEMINI_TIMEOUT_SECONDS = 60.0
 
 
 class MissingGeminiConfigurationError(RuntimeError):
