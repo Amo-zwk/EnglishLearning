@@ -4,8 +4,9 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import re
+import time
 from typing import Any, Callable
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib import request
 
 
@@ -30,6 +31,8 @@ GENERATION_CONFIG_ENV = "COPY_FORMAT_GENERATION_CONFIG_FILE"
 API_KEY_PATTERN = re.compile(r"AIza[0-9A-Za-z_-]{20,}")
 OPENAI_API_KEY_PATTERN = re.compile(r"sk-[0-9A-Za-z_-]{20,}")
 DEFAULT_GEMINI_TIMEOUT_SECONDS = 60.0
+DEFAULT_MAX_RETRY_ATTEMPTS = 3
+DEFAULT_RETRY_BACKOFF_SECONDS = 1.0
 
 
 class MissingGeminiConfigurationError(RuntimeError):
@@ -209,10 +212,12 @@ class GeminiGenerationAdapter:
             [str, dict[str, Any], dict[str, str], float], dict[str, Any]
         ]
         | None = None,
+        sleep: Callable[[float], None] | None = None,
     ) -> None:
         self._config = config
         self._timeout_seconds = timeout_seconds
         self._post_json = post_json or self._default_post_json
+        self._sleep = sleep or time.sleep
 
     @classmethod
     def from_local_files(
@@ -223,6 +228,7 @@ class GeminiGenerationAdapter:
             [str, dict[str, Any], dict[str, str], float], dict[str, Any]
         ]
         | None = None,
+        sleep: Callable[[float], None] | None = None,
     ) -> "GeminiGenerationAdapter":
         runtime_environment = environ or dict(__import__("os").environ)
         file_config = load_generation_config(runtime_environment)
@@ -237,6 +243,7 @@ class GeminiGenerationAdapter:
             config=config,
             timeout_seconds=timeout_seconds,
             post_json=post_json,
+            sleep=sleep,
         )
 
     def generate_word(self, input_word: str) -> dict[str, str]:
@@ -244,22 +251,57 @@ class GeminiGenerationAdapter:
         url = build_generation_request_url(self._config)
         payload = build_generation_request_payload(self._config, prompt)
         headers = build_generation_request_headers(self._config)
-        try:
-            response = self._post_json(url, payload, headers, self._timeout_seconds)
-        except TimeoutError as error:
-            raise RuntimeError(
-                "Gemini request timed out. Please retry this word later."
-            ) from error
-        except URLError as error:
-            reason = getattr(error, "reason", None)
-            if isinstance(reason, TimeoutError):
-                raise RuntimeError(
-                    "Gemini request timed out. Please retry this word later."
-                ) from error
-            raise RuntimeError(
-                "Gemini request failed. Please check your network connection and retry."
-            ) from error
+        response = self._post_with_retry(url, payload, headers)
         return {"content": extract_response_text(response)}
+
+    def _post_with_retry(
+        self,
+        url: str,
+        payload: dict[str, Any],
+        headers: dict[str, str],
+    ) -> dict[str, Any]:
+        last_error: Exception | None = None
+        for attempt_index in range(DEFAULT_MAX_RETRY_ATTEMPTS):
+            try:
+                return self._post_json(url, payload, headers, self._timeout_seconds)
+            except TimeoutError as error:
+                last_error = error
+                if not self._should_retry_attempt(attempt_index):
+                    raise RuntimeError(
+                        "Gemini request timed out after retries. Please retry this word later."
+                    ) from error
+            except HTTPError as error:
+                last_error = error
+                if not _is_retryable_http_status(error.code):
+                    raise RuntimeError(
+                        f"Gemini request failed with HTTP {error.code}. Please check the request configuration."
+                    ) from error
+                if not self._should_retry_attempt(attempt_index):
+                    raise RuntimeError(
+                        f"Gemini request failed with HTTP {error.code} after retries. Please retry this word later."
+                    ) from error
+            except URLError as error:
+                last_error = error
+                reason = getattr(error, "reason", None)
+                if isinstance(reason, TimeoutError):
+                    if not self._should_retry_attempt(attempt_index):
+                        raise RuntimeError(
+                            "Gemini request timed out after retries. Please retry this word later."
+                        ) from error
+                else:
+                    if not self._should_retry_attempt(attempt_index):
+                        raise RuntimeError(
+                            "Gemini request failed after retries. Please check your network connection and retry."
+                        ) from error
+            if self._should_retry_attempt(attempt_index):
+                self._sleep(DEFAULT_RETRY_BACKOFF_SECONDS * (2**attempt_index))
+        raise RuntimeError(
+            "Gemini request failed after retries. Please check your network connection and retry."
+        ) from last_error
+
+    @staticmethod
+    def _should_retry_attempt(attempt_index: int) -> bool:
+        return attempt_index + 1 < DEFAULT_MAX_RETRY_ATTEMPTS
 
     @staticmethod
     def _default_post_json(
@@ -313,6 +355,10 @@ def extract_response_text(response: dict[str, Any]) -> str:
     if isinstance(text, str) and text.strip():
         return text.strip()
     raise RuntimeError("OpenAI-compatible response did not contain text content.")
+
+
+def _is_retryable_http_status(status_code: int) -> bool:
+    return status_code == 429 or 500 <= status_code < 600
 
 
 def can_build_local_adapter(

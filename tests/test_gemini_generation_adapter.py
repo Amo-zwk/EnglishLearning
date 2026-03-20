@@ -1,8 +1,9 @@
 import json
 import tempfile
 import unittest
+from email.message import Message
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 from src.gemini_generation_adapter import (
     GeminiGenerationAdapter,
@@ -180,34 +181,143 @@ class GeminiGenerationAdapterTests(unittest.TestCase):
         self.assertEqual(result["content"], "(复制专用: $abandon hope$ $放弃希望$)")
 
     def test_wraps_timeout_error_with_retry_message(self) -> None:
+        attempts: list[int] = []
+        sleep_calls: list[float] = []
+
+        def flaky_post(url, payload, headers, timeout_seconds):
+            attempts.append(1)
+            raise TimeoutError("timed out")
+
         adapter = GeminiGenerationAdapter.from_local_files(
             environ={
                 "GEMINI_API_KEY": "AIzaSyEnvKey1234567890abcd",
                 "COPY_FORMAT_PROMPT_FILE": "/home/usercoder/project1/英语二的备考prompt.txt",
                 "COPY_FORMAT_GENERATION_CONFIG_FILE": self._missing_generation_config_path(),
             },
-            post_json=lambda url, payload, headers, timeout_seconds: (
-                _ for _ in ()
-            ).throw(TimeoutError("timed out")),
+            post_json=flaky_post,
+            sleep=lambda seconds: sleep_calls.append(seconds),
         )
 
-        with self.assertRaisesRegex(RuntimeError, "Gemini request timed out"):
+        with self.assertRaisesRegex(
+            RuntimeError, "Gemini request timed out after retries"
+        ):
             adapter.generate_word("abandon")
+
+        self.assertEqual(len(attempts), 3)
+        self.assertEqual(sleep_calls, [1.0, 2.0])
 
     def test_wraps_network_error_with_retry_message(self) -> None:
+        attempts: list[int] = []
+        sleep_calls: list[float] = []
+
+        def flaky_post(url, payload, headers, timeout_seconds):
+            attempts.append(1)
+            raise URLError("network down")
+
         adapter = GeminiGenerationAdapter.from_local_files(
             environ={
                 "GEMINI_API_KEY": "AIzaSyEnvKey1234567890abcd",
                 "COPY_FORMAT_PROMPT_FILE": "/home/usercoder/project1/英语二的备考prompt.txt",
                 "COPY_FORMAT_GENERATION_CONFIG_FILE": self._missing_generation_config_path(),
             },
-            post_json=lambda url, payload, headers, timeout_seconds: (
-                _ for _ in ()
-            ).throw(URLError("network down")),
+            post_json=flaky_post,
+            sleep=lambda seconds: sleep_calls.append(seconds),
         )
 
-        with self.assertRaisesRegex(RuntimeError, "Gemini request failed"):
+        with self.assertRaisesRegex(
+            RuntimeError, "Gemini request failed after retries"
+        ):
             adapter.generate_word("abandon")
+
+        self.assertEqual(len(attempts), 3)
+        self.assertEqual(sleep_calls, [1.0, 2.0])
+
+    def test_retries_timeout_then_succeeds(self) -> None:
+        attempts: list[int] = []
+        sleep_calls: list[float] = []
+
+        def flaky_post(url, payload, headers, timeout_seconds):
+            attempts.append(1)
+            if len(attempts) < 3:
+                raise TimeoutError("timed out")
+            return {
+                "choices": [
+                    {"message": {"content": "(复制专用: $abandon ship$ $弃船$)"}}
+                ]
+            }
+
+        adapter = GeminiGenerationAdapter.from_local_files(
+            environ={
+                "GEMINI_API_KEY": "sk-test-openai-compatible-key",
+                "COPY_FORMAT_PROMPT_FILE": "/home/usercoder/project1/英语二的备考prompt.txt",
+                "COPY_FORMAT_GENERATION_API_BASE_URL": "https://api.apifast.tech/v1",
+                "COPY_FORMAT_GENERATION_CONFIG_FILE": self._missing_generation_config_path(),
+            },
+            post_json=flaky_post,
+            sleep=lambda seconds: sleep_calls.append(seconds),
+        )
+
+        result = adapter.generate_word("abandon")
+
+        self.assertEqual(result["content"], "(复制专用: $abandon ship$ $弃船$)")
+        self.assertEqual(len(attempts), 3)
+        self.assertEqual(sleep_calls, [1.0, 2.0])
+
+    def test_retries_retryable_http_error_then_succeeds(self) -> None:
+        attempts: list[int] = []
+        sleep_calls: list[float] = []
+
+        def flaky_post(url, payload, headers, timeout_seconds):
+            attempts.append(1)
+            if len(attempts) == 1:
+                raise HTTPError(url, 429, "Too Many Requests", hdrs=Message(), fp=None)
+            return {
+                "choices": [
+                    {"message": {"content": "(复制专用: $abandon plan$ $放弃计划$)"}}
+                ]
+            }
+
+        adapter = GeminiGenerationAdapter.from_local_files(
+            environ={
+                "GEMINI_API_KEY": "sk-test-openai-compatible-key",
+                "COPY_FORMAT_PROMPT_FILE": "/home/usercoder/project1/英语二的备考prompt.txt",
+                "COPY_FORMAT_GENERATION_API_BASE_URL": "https://api.apifast.tech/v1",
+                "COPY_FORMAT_GENERATION_CONFIG_FILE": self._missing_generation_config_path(),
+            },
+            post_json=flaky_post,
+            sleep=lambda seconds: sleep_calls.append(seconds),
+        )
+
+        result = adapter.generate_word("abandon")
+
+        self.assertEqual(result["content"], "(复制专用: $abandon plan$ $放弃计划$)")
+        self.assertEqual(len(attempts), 2)
+        self.assertEqual(sleep_calls, [1.0])
+
+    def test_does_not_retry_non_retryable_http_error(self) -> None:
+        attempts: list[int] = []
+        sleep_calls: list[float] = []
+
+        def failing_post(url, payload, headers, timeout_seconds):
+            attempts.append(1)
+            raise HTTPError(url, 401, "Unauthorized", hdrs=Message(), fp=None)
+
+        adapter = GeminiGenerationAdapter.from_local_files(
+            environ={
+                "GEMINI_API_KEY": "sk-test-openai-compatible-key",
+                "COPY_FORMAT_PROMPT_FILE": "/home/usercoder/project1/英语二的备考prompt.txt",
+                "COPY_FORMAT_GENERATION_API_BASE_URL": "https://api.apifast.tech/v1",
+                "COPY_FORMAT_GENERATION_CONFIG_FILE": self._missing_generation_config_path(),
+            },
+            post_json=failing_post,
+            sleep=lambda seconds: sleep_calls.append(seconds),
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "HTTP 401"):
+            adapter.generate_word("abandon")
+
+        self.assertEqual(len(attempts), 1)
+        self.assertEqual(sleep_calls, [])
 
     def test_uses_openai_compatible_gateway_when_base_url_is_configured(self) -> None:
         recorded_request = {}
