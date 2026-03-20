@@ -25,6 +25,8 @@ class RecordingWorkspaceController:
         self.submit_calls = 0
         self.add_input_calls = 0
         self.add_multiple_input_calls: list[int] = []
+        self.set_input_blocks_calls: list[list[str]] = []
+        self.set_txt_import_summary_calls: list[tuple[int, str, str]] = []
         self.generate_calls = 0
         self.state = RecordingState(
             input_blocks=[object()],
@@ -54,6 +56,20 @@ class RecordingWorkspaceController:
     def update_input_block(self, index: int, value: str) -> None:
         while len(self.state.input_blocks) <= index:
             self.state.input_blocks.append(object())
+
+    def set_input_blocks(self, values: list[str]) -> None:
+        self.set_input_blocks_calls.append(list(values))
+        self.state.input_blocks = [object() for _ in values]
+
+    def set_txt_import_summary(
+        self,
+        imported_count: int,
+        source_name: str = "",
+        status_tone: str = "success",
+    ) -> None:
+        self.set_txt_import_summary_calls.append(
+            (imported_count, source_name, status_tone)
+        )
 
     def generate_results(self):
         self.generate_calls += 1
@@ -128,12 +144,13 @@ def build_wsgi_environ(
     method: str = "GET",
     path: str = "/",
     body: bytes = b"",
+    content_type: str = "application/x-www-form-urlencoded",
 ) -> dict[str, object]:
     return {
         "REQUEST_METHOD": method,
         "PATH_INFO": path,
         "CONTENT_LENGTH": str(len(body)),
-        "CONTENT_TYPE": "application/x-www-form-urlencoded",
+        "CONTENT_TYPE": content_type,
         "QUERY_STRING": "",
         "SERVER_NAME": "127.0.0.1",
         "SERVER_PORT": "8031",
@@ -213,6 +230,75 @@ class WebEntryRouteTests(unittest.TestCase):
         self.assertEqual(status, "200 OK")
         self.assertEqual(controller.add_multiple_input_calls, [50])
         self.assertIn('class="review-workspace"', body)
+
+    def test_import_txt_action_reads_lines_and_overwrites_input_blocks(self) -> None:
+        controller = RecordingWorkspaceController()
+        app = create_web_app(lambda: controller)
+        boundary = "----BoundaryForTxtImport"
+        body = build_multipart_form_data(
+            boundary,
+            {
+                "action": "import-txt",
+                "txt_import_file": {
+                    "filename": "words.txt",
+                    "content_type": "text/plain",
+                    "content": "  play football  \n\n on top of\n   take part in   \n",
+                },
+            },
+        )
+
+        status, _headers, html = call_wsgi_app(
+            app,
+            build_wsgi_environ(
+                method="POST",
+                body=body,
+                content_type=f"multipart/form-data; boundary={boundary}",
+            ),
+        )
+
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(
+            controller.set_input_blocks_calls,
+            [["play football", "on top of", "take part in"]],
+        )
+        self.assertEqual(
+            controller.set_txt_import_summary_calls,
+            [(3, "words.txt", "success")],
+        )
+        self.assertIn('class="review-workspace"', html)
+
+    def test_import_txt_action_ignores_empty_file_content(self) -> None:
+        controller = RecordingWorkspaceController()
+        app = create_web_app(lambda: controller)
+        boundary = "----BoundaryForEmptyTxtImport"
+        body = build_multipart_form_data(
+            boundary,
+            {
+                "action": "import-txt",
+                "txt_import_file": {
+                    "filename": "empty.txt",
+                    "content_type": "text/plain",
+                    "content": "   \n\n  ",
+                },
+            },
+        )
+
+        status, _headers, html = call_wsgi_app(
+            app,
+            build_wsgi_environ(
+                method="POST",
+                body=body,
+                content_type=f"multipart/form-data; boundary={boundary}",
+            ),
+        )
+
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(controller.set_input_blocks_calls, [])
+        self.assertEqual(
+            controller.set_txt_import_summary_calls,
+            [(0, "empty.txt", "empty")],
+        )
+        self.assertIn('class="review-workspace"', html)
 
 
 class WebAppFactoryAdapterTests(unittest.TestCase):
@@ -309,6 +395,14 @@ class WebAppFactoryAdapterTests(unittest.TestCase):
         self.assertIn('submitter.value !== "generate"', body)
         self.assertIn("生成中...", body)
         self.assertIn("提交中...", body)
+        self.assertIn('enctype="multipart/form-data"', body)
+        self.assertIn('value="import-txt"', body)
+        self.assertIn('name="txt_import_file"', body)
+        self.assertIn("data-txt-import-panel", body)
+        self.assertIn("导入 txt 文本", body)
+        self.assertIn("按每行一条读取", body)
+        self.assertIn("initTxtDropImport()", body)
+        self.assertIn('panel.classList.toggle("is-dragging", isDragging)', body)
         self.assertIn('value="add-50-inputs"', body)
         self.assertIn("一次加 50 个", body)
         self.assertIn(".generate-action.is-pending", body)
@@ -546,3 +640,33 @@ class WebSubmissionRoundtripTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def build_multipart_form_data(
+    boundary: str,
+    fields: dict[str, object],
+) -> bytes:
+    parts: list[bytes] = []
+    for name, value in fields.items():
+        parts.append(f"--{boundary}\r\n".encode("utf-8"))
+        if isinstance(value, dict):
+            filename = cast(str, value["filename"])
+            content_type = cast(str, value["content_type"])
+            content = cast(str, value["content"])
+            parts.append(
+                (
+                    f'Content-Disposition: form-data; name="{name}"; '
+                    f'filename="{filename}"\r\n'
+                ).encode("utf-8")
+            )
+            parts.append(f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"))
+            parts.append(content.encode("utf-8"))
+            parts.append(b"\r\n")
+            continue
+        parts.append(
+            f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("utf-8")
+        )
+        parts.append(str(value).encode("utf-8"))
+        parts.append(b"\r\n")
+    parts.append(f"--{boundary}--\r\n".encode("utf-8"))
+    return b"".join(parts)

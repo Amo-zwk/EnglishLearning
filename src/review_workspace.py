@@ -34,6 +34,7 @@ class ReviewWorkspaceState:
     submission_outcomes: list[GroupSubmissionOutcome] = field(default_factory=list)
     last_generation_duration_seconds: float | None = None
     latest_submission_summary: SubmissionSummary | None = None
+    latest_txt_import_summary: TxtImportSummary | None = None
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,13 @@ class SubmissionSummary:
     skipped_items: list[SubmissionOutcomeItem] = field(default_factory=list)
     failed_items: list[SubmissionOutcomeItem] = field(default_factory=list)
     auto_cleared: bool = False
+
+
+@dataclass(frozen=True)
+class TxtImportSummary:
+    imported_count: int
+    message: str
+    status_tone: str
 
 
 class ReviewWorkspaceController:
@@ -103,6 +111,39 @@ class ReviewWorkspaceController:
             ],
         )
 
+    def set_input_blocks(self, values: list[str]) -> None:
+        normalized_values = [value for value in values]
+        next_count = max(len(normalized_values), self._initial_input_count, 1)
+        self.state = replace(
+            self.state,
+            input_blocks=[
+                InputBlock(value=normalized_values[index])
+                if index < len(normalized_values)
+                else InputBlock()
+                for index in range(next_count)
+            ],
+        )
+
+    def set_txt_import_summary(
+        self,
+        imported_count: int,
+        source_name: str = "",
+        status_tone: str = "success",
+    ) -> None:
+        source_suffix = f"（{source_name}）" if source_name else ""
+        if imported_count > 0:
+            message = f"已从 txt 导入 {imported_count} 条内容{source_suffix}，并覆盖当前输入区。"
+        else:
+            message = f"txt 文件里没有可导入内容{source_suffix}。"
+        self.state = replace(
+            self.state,
+            latest_txt_import_summary=TxtImportSummary(
+                imported_count=imported_count,
+                message=message,
+                status_tone=status_tone,
+            ),
+        )
+
     def update_input_block(self, index: int, value: str) -> None:
         updated_blocks = list(self.state.input_blocks)
         updated_blocks[index] = InputBlock(value=value)
@@ -130,6 +171,7 @@ class ReviewWorkspaceController:
             submission_outcomes=[],
             last_generation_duration_seconds=generation_duration_seconds,
             latest_submission_summary=None,
+            latest_txt_import_summary=None,
         )
         return result_groups
 
@@ -234,6 +276,7 @@ class ReviewWorkspaceController:
             self.state,
             submission_outcomes=submission_outcomes,
             latest_submission_summary=latest_submission_summary,
+            latest_txt_import_summary=None,
         )
         if latest_submission_summary.failed_count == 0:
             next_state = replace(
@@ -269,6 +312,7 @@ class ReviewWorkspaceController:
         review_overview_html = self._render_review_overview()
         return (
             '<section class="review-workspace">'
+            f"{self._render_latest_txt_import_summary()}"
             f"{self._render_latest_submission_summary()}"
             '<div class="input-blocks">'
             f"{input_blocks_html}"
@@ -552,6 +596,18 @@ class ReviewWorkspaceController:
             f'data-failure-status="{status}" aria-live="polite">'
             '<p class="generation-failure-label">生成失败</p>'
             f'<p class="generation-failure-message">{message}</p>'
+            "</section>"
+        )
+
+    def _render_latest_txt_import_summary(self) -> str:
+        summary = self.state.latest_txt_import_summary
+        if summary is None:
+            return ""
+        return (
+            f'<section class="txt-import-banner txt-import-banner-{escape(summary.status_tone)}" '
+            f'data-import-status="{escape(summary.status_tone)}" aria-live="polite">'
+            '<p class="txt-import-banner-label">txt 导入结果</p>'
+            f'<p class="txt-import-banner-message">{escape(summary.message)}</p>'
             "</section>"
         )
 

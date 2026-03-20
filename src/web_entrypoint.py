@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from importlib import util
+from io import BytesIO
 from pathlib import Path
+from cgi import FieldStorage
 from typing import Callable, Protocol, cast
 from urllib.parse import parse_qs
 from wsgiref.simple_server import make_server
@@ -51,6 +53,15 @@ class WorkspaceControllerProtocol(Protocol):
     def add_input_block(self) -> None: ...
 
     def add_input_blocks(self, count: int) -> None: ...
+
+    def set_input_blocks(self, values: list[str]) -> None: ...
+
+    def set_txt_import_summary(
+        self,
+        imported_count: int,
+        source_name: str = "",
+        status_tone: str = "success",
+    ) -> None: ...
 
     def update_input_block(self, index: int, value: str) -> None: ...
 
@@ -333,6 +344,38 @@ def render_page(workspace_html: str) -> str:
             box-shadow: 0 10px 24px rgba(94, 117, 55, 0.1);
         }}
         .submission-pending-banner.is-visible {{ display: grid; gap: 6px; }}
+        .txt-import-panel {{
+            display: grid;
+            gap: 12px;
+            margin: 0 0 18px;
+            padding: 16px 18px;
+            border-radius: 22px;
+            border: 1px dashed rgba(86, 130, 165, 0.28);
+            background: linear-gradient(135deg, rgba(244, 248, 251, 0.96) 0%, rgba(252, 252, 248, 0.92) 100%);
+            box-shadow: 0 10px 24px rgba(61, 102, 129, 0.08);
+            transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+        }}
+        .txt-import-panel.is-dragging {{
+            border-color: rgba(201, 111, 59, 0.56);
+            box-shadow: 0 16px 28px rgba(169, 81, 40, 0.12);
+            transform: translateY(-1px);
+        }}
+        .txt-import-label {{ margin: 0; font-size: 18px; font-weight: 700; color: #36516f; }}
+        .txt-import-controls {{ display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }}
+        .txt-import-hint {{ margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }}
+        .txt-import-banner {{
+            display: grid;
+            gap: 6px;
+            margin: 0 0 18px;
+            padding: 16px 18px;
+            border-radius: 22px;
+            border: 1px solid rgba(86, 130, 165, 0.18);
+            box-shadow: 0 10px 24px rgba(61, 102, 129, 0.08);
+        }}
+        .txt-import-banner-success {{ background: linear-gradient(135deg, rgba(231, 241, 248, 0.96) 0%, rgba(245, 249, 252, 0.94) 100%); color: #23496b; }}
+        .txt-import-banner-empty {{ background: linear-gradient(135deg, rgba(251, 241, 214, 0.96) 0%, rgba(255, 248, 230, 0.94) 100%); color: #694d14; }}
+        .txt-import-banner-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.78; }}
+        .txt-import-banner-message {{ margin: 0; font-size: 16px; line-height: 1.6; font-weight: 700; }}
         .generation-pending-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.78; }}
         .generation-pending-text {{ margin: 0; font-size: 16px; line-height: 1.6; font-weight: 700; }}
         .submission-pending-label {{ margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.78; }}
@@ -515,7 +558,7 @@ def render_page(workspace_html: str) -> str:
             <h1>英语词组制卡工作台</h1>
             <p class=\"page-intro\">输入一个或多个单词，生成完整解析，核对复制专用提取结果，再把真正有价值的词组送进你的 Anki Deck。</p>
         </section>
-        <form method=\"post\"><div class=\"generation-pending-banner\" data-generation-pending-banner aria-live=\"polite\"><p class=\"generation-pending-label\">生成中</p><p class=\"generation-pending-text\">正在等待 AI 返回结果，请稍候，页面会在完成后自动刷新。</p></div><div class=\"submission-pending-banner\" data-submission-pending-banner aria-live=\"polite\"><p class=\"submission-pending-label\">提交中</p><p class=\"submission-pending-text\">正在提交选中词组到 Anki，请稍候，完成后会在页面顶部显示结果摘要。</p></div>{workspace_html}<div class=\"action-bar\"><button type=\"submit\" name=\"action\" value=\"add-input\" class=\"secondary-action\">新增输入框</button><button type=\"submit\" name=\"action\" value=\"add-50-inputs\" class=\"secondary-action\">一次加 50 个</button><button type=\"submit\" name=\"action\" value=\"generate\">开始生成</button><button type=\"submit\" name=\"action\" value=\"submit\">提交选中词组</button></div></form>
+        <form method=\"post\" enctype=\"multipart/form-data\"><div class=\"generation-pending-banner\" data-generation-pending-banner aria-live=\"polite\"><p class=\"generation-pending-label\">生成中</p><p class=\"generation-pending-text\">正在等待 AI 返回结果，请稍候，页面会在完成后自动刷新。</p></div><div class=\"submission-pending-banner\" data-submission-pending-banner aria-live=\"polite\"><p class=\"submission-pending-label\">提交中</p><p class=\"submission-pending-text\">正在提交选中词组到 Anki，请稍候，完成后会在页面顶部显示结果摘要。</p></div><section class=\"txt-import-panel\" data-txt-import-panel><label for=\"txt-import-file\" class=\"txt-import-label\">导入 txt 文本</label><div class=\"txt-import-controls\"><input id=\"txt-import-file\" name=\"txt_import_file\" type=\"file\" accept=\".txt,text/plain\"><button type=\"submit\" name=\"action\" value=\"import-txt\" class=\"secondary-action\">读取 txt</button></div><p class=\"txt-import-hint\">按每行一条读取，自动去掉首尾空白，空行会跳过，并覆盖当前输入区内容。</p></section>{workspace_html}<div class=\"action-bar\"><button type=\"submit\" name=\"action\" value=\"add-input\" class=\"secondary-action\">新增输入框</button><button type=\"submit\" name=\"action\" value=\"add-50-inputs\" class=\"secondary-action\">一次加 50 个</button><button type=\"submit\" name=\"action\" value=\"generate\">开始生成</button><button type=\"submit\" name=\"action\" value=\"submit\">提交选中词组</button></div></form>
     </main>
     <script>
         var EXPORT_OPTION_STORAGE_KEY = "copy-format-export-options";
@@ -842,6 +885,41 @@ def render_page(workspace_html: str) -> str:
             }});
         }}
 
+        function initTxtDropImport() {{
+            var panel = document.querySelector("[data-txt-import-panel]");
+            if (!(panel instanceof HTMLElement)) {{
+                return;
+            }}
+            var fileInput = document.getElementById("txt-import-file");
+            if (!(fileInput instanceof HTMLInputElement)) {{
+                return;
+            }}
+
+            var toggleDragging = function(isDragging) {{
+                panel.classList.toggle("is-dragging", isDragging);
+            }};
+
+            ["dragenter", "dragover"].forEach(function(eventName) {{
+                panel.addEventListener(eventName, function(event) {{
+                    event.preventDefault();
+                    toggleDragging(true);
+                }});
+            }});
+            ["dragleave", "dragend", "drop"].forEach(function(eventName) {{
+                panel.addEventListener(eventName, function(event) {{
+                    event.preventDefault();
+                    toggleDragging(false);
+                }});
+            }});
+            panel.addEventListener("drop", function(event) {{
+                var droppedFiles = event.dataTransfer ? event.dataTransfer.files : null;
+                if (!droppedFiles || !droppedFiles.length) {{
+                    return;
+                }}
+                fileInput.files = droppedFiles;
+            }});
+        }}
+
         function activateExportFormat(button) {{
             var format = button.getAttribute("data-export-format");
             if (!format) {{
@@ -950,6 +1028,7 @@ def render_page(workspace_html: str) -> str:
         initDeckSearch();
         initGenerationPendingState();
         initSubmissionPendingState();
+        initTxtDropImport();
         refreshCopyExportArea();
     </script>
 </body>
@@ -972,11 +1051,34 @@ def main() -> None:
 
 
 def _read_form_data(environ) -> dict[str, str]:
+    content_type = str(environ.get("CONTENT_TYPE", "") or "")
     content_length_value = str(environ.get("CONTENT_LENGTH", "0") or "0")
     content_length = int(content_length_value) if content_length_value.isdigit() else 0
     raw_body = environ["wsgi.input"].read(content_length)
+    if "multipart/form-data" in content_type:
+        return _read_multipart_form_data(environ, raw_body)
     parsed = parse_qs(raw_body.decode("utf-8"), keep_blank_values=True)
     return {key: values[-1] if values else "" for key, values in parsed.items()}
+
+
+def _read_multipart_form_data(environ, raw_body: bytes) -> dict[str, str]:
+    field_storage = FieldStorage(
+        fp=BytesIO(raw_body),
+        environ={**environ, "CONTENT_LENGTH": str(len(raw_body))},
+        keep_blank_values=True,
+    )
+    parsed: dict[str, str] = {}
+    for key in field_storage.keys():
+        field = field_storage[key]
+        if isinstance(field, list):
+            field = field[-1]
+        if getattr(field, "filename", None):
+            file_bytes = field.file.read() if field.file is not None else b""
+            parsed[key] = file_bytes.decode("utf-8-sig")
+            parsed[f"{key}__filename"] = str(field.filename or "")
+            continue
+        parsed[key] = field.value or ""
+    return parsed
 
 
 def _apply_request_to_workspace(
@@ -992,6 +1094,14 @@ def _apply_request_to_workspace(
 
     if action == "add-50-inputs":
         workspace.add_input_blocks(50)
+        return
+
+    if action == "import-txt":
+        _import_txt_into_workspace(
+            workspace,
+            form_data.get("txt_import_file", ""),
+            form_data.get("txt_import_file__filename", ""),
+        )
         return
 
     if action == "generate":
@@ -1061,6 +1171,26 @@ def _sync_phrase_edits(
                 phrase_index=phrase_index,
                 locked=locked_key in form_data,
             )
+
+
+def _import_txt_into_workspace(
+    workspace: WorkspaceControllerProtocol,
+    txt_content: str,
+    source_name: str,
+) -> None:
+    imported_lines = [line.strip() for line in txt_content.splitlines()]
+    filtered_lines = [line for line in imported_lines if line]
+    if not filtered_lines:
+        if hasattr(workspace, "set_txt_import_summary"):
+            workspace.set_txt_import_summary(0, source_name, status_tone="empty")
+        return
+    workspace.set_input_blocks(filtered_lines)
+    if hasattr(workspace, "set_txt_import_summary"):
+        workspace.set_txt_import_summary(
+            len(filtered_lines),
+            source_name,
+            status_tone="success",
+        )
 
 
 def _load_callable_from_target(target: str) -> GenerationCallable:
