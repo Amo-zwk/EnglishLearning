@@ -267,6 +267,42 @@ class WebEntryRouteTests(unittest.TestCase):
         )
         self.assertIn('class="review-workspace"', html)
 
+    def test_import_txt_action_reads_utf8_bom_content_without_cgi_module(self) -> None:
+        controller = RecordingWorkspaceController()
+        app = create_web_app(lambda: controller)
+        boundary = "----BoundaryForBomTxtImport"
+        body = build_multipart_form_data_bytes(
+            boundary,
+            {
+                "action": b"import-txt",
+                "txt_import_file": {
+                    "filename": "bom_words.txt",
+                    "content_type": "text/plain",
+                    "content_bytes": b"\xef\xbb\xbfline one\r\nline two\r\n",
+                },
+            },
+        )
+
+        status, _headers, html = call_wsgi_app(
+            app,
+            build_wsgi_environ(
+                method="POST",
+                body=body,
+                content_type=f"multipart/form-data; boundary={boundary}",
+            ),
+        )
+
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(
+            controller.set_input_blocks_calls,
+            [["line one", "line two"]],
+        )
+        self.assertEqual(
+            controller.set_txt_import_summary_calls,
+            [(2, "bom_words.txt", "success")],
+        )
+        self.assertIn('class="review-workspace"', html)
+
     def test_import_txt_action_ignores_empty_file_content(self) -> None:
         controller = RecordingWorkspaceController()
         app = create_web_app(lambda: controller)
@@ -649,13 +685,28 @@ def build_multipart_form_data(
     boundary: str,
     fields: dict[str, object],
 ) -> bytes:
+    normalized_fields: dict[str, object] = {}
+    for name, value in fields.items():
+        if isinstance(value, dict):
+            normalized_fields[name] = value
+            continue
+        normalized_fields[name] = str(value).encode("utf-8")
+    return build_multipart_form_data_bytes(boundary, normalized_fields)
+
+
+def build_multipart_form_data_bytes(
+    boundary: str,
+    fields: dict[str, object],
+) -> bytes:
     parts: list[bytes] = []
     for name, value in fields.items():
         parts.append(f"--{boundary}\r\n".encode("utf-8"))
         if isinstance(value, dict):
             filename = cast(str, value["filename"])
             content_type = cast(str, value["content_type"])
-            content = cast(str, value["content"])
+            content_bytes = cast(bytes, value.get("content_bytes", b""))
+            if not content_bytes:
+                content_bytes = cast(str, value["content"]).encode("utf-8")
             parts.append(
                 (
                     f'Content-Disposition: form-data; name="{name}"; '
@@ -663,13 +714,13 @@ def build_multipart_form_data(
                 ).encode("utf-8")
             )
             parts.append(f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"))
-            parts.append(content.encode("utf-8"))
+            parts.append(content_bytes)
             parts.append(b"\r\n")
             continue
         parts.append(
             f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("utf-8")
         )
-        parts.append(str(value).encode("utf-8"))
+        parts.append(cast(bytes, value))
         parts.append(b"\r\n")
     parts.append(f"--{boundary}--\r\n".encode("utf-8"))
     return b"".join(parts)

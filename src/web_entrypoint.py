@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from importlib import util
-from io import BytesIO
 from pathlib import Path
-from cgi import FieldStorage
 from typing import Callable, Protocol, cast
 from urllib.parse import parse_qs
 from wsgiref.simple_server import make_server
@@ -1084,23 +1082,75 @@ def _read_form_data(environ) -> dict[str, str]:
 
 
 def _read_multipart_form_data(environ, raw_body: bytes) -> dict[str, str]:
-    field_storage = FieldStorage(
-        fp=BytesIO(raw_body),
-        environ={**environ, "CONTENT_LENGTH": str(len(raw_body))},
-        keep_blank_values=True,
-    )
+    content_type = str(environ.get("CONTENT_TYPE", "") or "")
+    boundary = _extract_multipart_boundary(content_type)
+    if not boundary:
+        return {}
+
     parsed: dict[str, str] = {}
-    for key in field_storage.keys():
-        field = field_storage[key]
-        if isinstance(field, list):
-            field = field[-1]
-        if getattr(field, "filename", None):
-            file_bytes = field.file.read() if field.file is not None else b""
-            parsed[key] = file_bytes.decode("utf-8-sig")
-            parsed[f"{key}__filename"] = str(field.filename or "")
+    delimiter = b"--" + boundary.encode("utf-8")
+    for part in raw_body.split(delimiter):
+        normalized_part = part
+        if normalized_part.startswith(b"\r\n"):
+            normalized_part = normalized_part[2:]
+        if not normalized_part or normalized_part in {b"--", b"--\r\n"}:
             continue
-        parsed[key] = field.value or ""
+
+        if normalized_part.endswith(b"\r\n"):
+            normalized_part = normalized_part[:-2]
+        if normalized_part.endswith(b"--"):
+            normalized_part = normalized_part[:-2]
+
+        header_block, separator, content_block = normalized_part.partition(b"\r\n\r\n")
+        if not separator:
+            continue
+
+        header_lines = header_block.decode("utf-8", errors="replace").split("\r\n")
+        headers = _parse_multipart_headers(header_lines)
+        disposition = headers.get("content-disposition", "")
+        field_name = _extract_disposition_value(disposition, "name")
+        if not field_name:
+            continue
+
+        content = content_block
+        if content.endswith(b"\r\n"):
+            content = content[:-2]
+
+        filename = _extract_disposition_value(disposition, "filename")
+        if filename:
+            parsed[field_name] = content.decode("utf-8-sig", errors="replace")
+            parsed[f"{field_name}__filename"] = filename
+            continue
+
+        parsed[field_name] = content.decode("utf-8", errors="replace")
     return parsed
+
+
+def _extract_multipart_boundary(content_type: str) -> str:
+    for segment in content_type.split(";"):
+        trimmed_segment = segment.strip()
+        if trimmed_segment.startswith("boundary="):
+            return trimmed_segment.split("=", 1)[1].strip('"')
+    return ""
+
+
+def _parse_multipart_headers(header_lines: list[str]) -> dict[str, str]:
+    headers: dict[str, str] = {}
+    for header_line in header_lines:
+        name, separator, value = header_line.partition(":")
+        if not separator:
+            continue
+        headers[name.strip().lower()] = value.strip()
+    return headers
+
+
+def _extract_disposition_value(disposition: str, key: str) -> str:
+    for segment in disposition.split(";"):
+        trimmed_segment = segment.strip()
+        prefix = f"{key}="
+        if trimmed_segment.startswith(prefix):
+            return trimmed_segment[len(prefix) :].strip('"')
+    return ""
 
 
 def _apply_request_to_workspace(
