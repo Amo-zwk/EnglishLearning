@@ -890,10 +890,30 @@ def render_page(workspace_html: str) -> str:
             if (!(panel instanceof HTMLElement)) {{
                 return;
             }}
+            var form = document.querySelector("form");
+            if (!(form instanceof HTMLFormElement)) {{
+                return;
+            }}
             var fileInput = document.getElementById("txt-import-file");
             if (!(fileInput instanceof HTMLInputElement)) {{
                 return;
             }}
+
+            var submitImport = function() {{
+                if (!fileInput.files || !fileInput.files.length) {{
+                    return;
+                }}
+                var actionInput = form.querySelector('input[name="action"][data-auto-import-action]');
+                if (!(actionInput instanceof HTMLInputElement)) {{
+                    actionInput = document.createElement("input");
+                    actionInput.type = "hidden";
+                    actionInput.name = "action";
+                    actionInput.value = "import-txt";
+                    actionInput.setAttribute("data-auto-import-action", "true");
+                    form.appendChild(actionInput);
+                }}
+                form.requestSubmit();
+            }};
 
             var toggleDragging = function(isDragging) {{
                 panel.classList.toggle("is-dragging", isDragging);
@@ -917,7 +937,9 @@ def render_page(workspace_html: str) -> str:
                     return;
                 }}
                 fileInput.files = droppedFiles;
+                submitImport();
             }});
+            fileInput.addEventListener("change", submitImport);
         }}
 
         function activateExportFormat(button) {{
