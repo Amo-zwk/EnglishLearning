@@ -4,9 +4,8 @@ from dataclasses import dataclass, field
 import re
 
 
-COPY_FORMAT_PATTERN = re.compile(
-    r"[\(（]复制专用[:：]\s*\$(?P<front>[^$]+)\$\s*\$(?P<back>[^$]+)\$[\)）]"
-)
+COPY_FORMAT_PATTERN = re.compile(r"[\(（]复制专用[:：](?P<body>.*?)[\)）]")
+COPY_FORMAT_SEGMENT_PATTERN = re.compile(r"\$([^$]+)\$")
 
 
 @dataclass(frozen=True)
@@ -35,8 +34,19 @@ def extract_copy_format_phrase_pairs(request: ExtractionRequest) -> ExtractionRe
     phrases: list[ExtractedPhrasePair] = []
 
     for match in COPY_FORMAT_PATTERN.finditer(request.ai_response):
-        front = make_front_dedupe_key(match.group("front"))
-        back = match.group("back").strip()
+        segments = [
+            segment.strip()
+            for segment in COPY_FORMAT_SEGMENT_PATTERN.findall(match.group("body"))
+        ]
+        if len(segments) == 2:
+            front = make_front_dedupe_key(segments[0])
+            back = segments[1]
+        elif len(segments) == 3:
+            front = make_front_dedupe_key(f"{segments[0]} {segments[1]}")
+            back = segments[2]
+        else:
+            continue
+
         if not front or not back:
             continue
         phrases.append(ExtractedPhrasePair(front=front, back=back))

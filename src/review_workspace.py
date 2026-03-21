@@ -520,6 +520,8 @@ class ReviewWorkspaceController:
                 empty_state_message = (
                     "这次生成没有产出可提交词组，请先根据上面的失败原因检查配置或重试。"
                 )
+            elif (result_group.full_ai_response or "").strip():
+                empty_state_message = "这次生成返回了内容，但没有识别出可提交词组。请展开上方完整 AI 响应，检查复制专用格式是否发生漂移。"
             return (
                 '<section class="extracted-review-area">'
                 f"<p>{empty_state_message}</p>"

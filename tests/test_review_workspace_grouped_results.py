@@ -76,8 +76,31 @@ class ReviewWorkspaceGroupedResultsTests(unittest.TestCase):
         html = workspace.render_html()
 
         self.assertIn('class="extracted-review-area"', html)
-        self.assertIn("没有可提交的提取词组。", html)
+        self.assertIn(
+            "这次生成返回了内容，但没有识别出可提交词组。请展开上方完整 AI 响应，检查复制专用格式是否发生漂移。",
+            html,
+        )
         self.assertEqual(html.count('class="phrase-box"'), 0)
+
+    def test_renders_plain_empty_message_when_response_is_blank(self) -> None:
+        workspace = ReviewWorkspaceController(
+            generation_action=lambda input_words: [
+                OrchestratedResultGroup(
+                    input_word="claim",
+                    full_ai_response="   ",
+                    extracted_phrases=[],
+                )
+            ],
+            list_decks_action=lambda: ["Default"],
+            submit_action=no_op_submit_action,
+        )
+
+        workspace.update_input_block(0, "claim")
+        workspace.generate_results()
+
+        html = workspace.render_html()
+
+        self.assertIn("没有可提交的提取词组。", html)
 
     def test_renders_generation_failure_message_when_request_fails(self) -> None:
         workspace = ReviewWorkspaceController(

@@ -122,6 +122,43 @@ class CopyFormatExtractionContractTests(unittest.TestCase):
             ["帮某人一个忙", "回报别人的人情"],
         )
 
+    def test_accepts_three_segment_copy_format_by_joining_front_parts(self) -> None:
+        request = ExtractionRequest(
+            input_word="oppose",
+            ai_response=(
+                "强调程度时常这样表达。\n"
+                "(复制专用: $militantly$ $oppose$ $激进地反对$)\n"
+                "(复制专用：$strongly$ $support$ $强烈支持$)"
+            ),
+        )
+
+        result = extract_copy_format_phrase_pairs(request)
+
+        self.assertEqual(result.input_word, "oppose")
+        self.assertEqual(
+            [phrase.front for phrase in result.phrases],
+            ["militantly oppose", "strongly support"],
+        )
+        self.assertEqual(
+            [phrase.back for phrase in result.phrases],
+            ["激进地反对", "强烈支持"],
+        )
+
+    def test_rejects_copy_format_with_unsupported_segment_count(self) -> None:
+        request = ExtractionRequest(
+            input_word="break",
+            ai_response=(
+                "(复制专用: $break$ $it$ $down$ $分解它$)\n"
+                "(复制专用: $break down$ $出故障$)"
+            ),
+        )
+
+        result = extract_copy_format_phrase_pairs(request)
+
+        self.assertEqual(len(result.phrases), 1)
+        self.assertEqual(result.phrases[0].front, "break down")
+        self.assertEqual(result.phrases[0].back, "出故障")
+
     def test_dedupe_key_normalizes_surrounding_whitespace_only(self) -> None:
         self.assertEqual(
             make_front_dedupe_key(" deliver a speech "),
